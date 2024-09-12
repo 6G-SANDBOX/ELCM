@@ -8,6 +8,13 @@ from os import environ
 class DeployExperiment(Task):
     def __init__(self, logMethod, parent, params):
         super().__init__("Deploy Experiment", parent, params, logMethod)
+        self.paramRules = {
+            'HelmChartPath': (None, False),
+            'ReleaseName': (None, True),
+            'Action': (None, True),
+            'Namespace': ('Default', False)
+        }
+
         self.helm_chat_path = self.params['HelmChartPath']
         self.release_name = self.params['ReleaseName']
         self.action = self.params['Action']
