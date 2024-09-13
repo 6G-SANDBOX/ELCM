@@ -152,8 +152,11 @@ class ExperimentRun:
         if current is not None:
             current.RequestStop()
         self.CoarseStatus = CoarseStatus.Cancelled
-        self.AppEviction(self.Params["DeviceId"])
-        self.TapEviction()
+
+        device = self.Params.get("DeviceId", None)
+        if device is not None:
+            self.AppEviction(device)
+            self.TapEviction()
         self.PostRunner.Start()  # Temporal fix for the release of the resources after the cancellation.
 
     def PreRun(self):
