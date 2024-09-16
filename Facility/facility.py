@@ -12,8 +12,8 @@ from .Loader import Loader, ResourceLoader, ScenarioLoader, UeLoader, TestCaseLo
 class Facility:
     lock = Lock()
     requesters: Dict[str, List[str]] = {}
-    activeExperiments = 0
-    activeExclusive: Optional[int] = None
+    activeExperiments: List[str] = []
+    activeExclusive: Optional[str] = None
 
     TESTCASE_FOLDER = abspath('TestCases')
     UE_FOLDER = abspath('UEs')
@@ -129,8 +129,8 @@ class Facility:
             cls.requesters[executor] = resourceIds
 
         # For exclusive experiments check if something else is running
-        if exclusive and cls.activeExperiments != 0:
-            Log.D(f"Resources denied to {executor}: Requests exclusive execution ({cls.activeExperiments} active)")
+        if exclusive and len(cls.activeExperiments) != 0:
+            Log.D(f"Resources denied to {executor}: Requests exclusive execution ({len(cls.activeExperiments)} active)")
             return False
 
         # For non exclusive experiments check if an exclusive experiment is running
@@ -164,7 +164,7 @@ class Facility:
 
         if exclusive:
             cls.activeExclusive = owner.ExecutionId
-        cls.activeExperiments += 1
+        cls.activeExperiments.append(owner.ExecutionId)
 
         return True
 
@@ -177,7 +177,9 @@ class Facility:
 
         if execution == cls.activeExclusive:
             cls.activeExclusive = None
-        cls.activeExperiments -= 1
+        try:
+            cls.activeExperiments.remove(execution)
+        except ValueError: pass
 
     @classmethod
     def _releaseResources(cls, ids: List[str]):
