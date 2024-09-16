@@ -25,6 +25,11 @@ class PreRunner(ExecutorBase):
 
         available = False
         while not available:
+            parent = self.findParent()
+            if parent is None or parent.Cancelled:
+                # A cancelled experiment will usually be removed before reaching this point, hence the uncertainty
+                raise RuntimeError("Experiment errored, cancelled or not found. Aborting")
+
             result = CheckResources(self.Log, self.ExecutionId, self.Configuration.Requirements,
                                     self.Configuration.NetworkServices, self).Start()
             available = result['Available']
