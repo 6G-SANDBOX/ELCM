@@ -14,3 +14,9 @@ from .rest_api import RestApi
 from .upgrade_verdict import UpgradeVerdict
 from .evaluate import Evaluate
 from .robot_framework import RobotFramework
+from .kafka_consumerToInflux import KafkaConsummerToInflux
+from .stop_task import stop_task
+from .prometheus_ToInflux import PrometheusToInflux
+from .email_notification import email_notification
+from .mqtt_ToInflux import mqtt_ToInflux
+from .telegraf_ToInflux import telegraf_ToInflux

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>General Tasks&colon;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="general-tasks">General Tasks:</h1>
+<p>The following is a list of the tasks that can be defined as part of a TestCase or UE list of actions, as well as
+their configuration values.</p>
+<h3 id="common-values">Common values:</h3>
+<p>All tasks recognize the following configuration value:</p>
+<ul>
+<li><code>VerdictOnError</code>: Name of the verdict to reach when the task encounters an error during execution (what is considered
+an error varies from task to task). By default, the value in <code>config.yml</code> is used. See 'Task and execution verdicts'
+(<a href="/docs/3-3_VARIABLE_EXPANSION_VERDICT.html">Variable Expansion and Execution Verdict</a>).</li>
+</ul>
+<h2 id="runcliexecute">Run.CliExecute</h2>
+<p>Executes a script or command through the command line. Configuration values:</p>
+<ul>
+<li><code>Parameters</code>: Parameters to pass to the command line (i.e. the line to write on the CLI)</li>
+<li><code>CWD</code>: Working directory where the command will run</li>
+</ul>
+<h2 id="runcompressfiles">Run.CompressFiles</h2>
+<p>Generates a Zip file that contains all the specified files. Configuration values:</p>
+<ul>
+<li><code>Files</code>: List of (single) files to add to the Zip file</li>
+<li><code>Folders</code>: List of folders to search files from. All the files contained within
+these folders and their sub-folders will be added to the Zip file</li>
+<li><code>Output</code>: Name of the Zip file to generate.</li>
+</ul>
+<h2 id="runcsvtoinflux">Run.CsvToInflux</h2>
+<p>Uploads the contents of a CSV file to InfluxDb. The file must contain a header row that specifies the names of each
+column, and must contain a column that specifies the timestamp value of the row as a POSIX timestamp (seconds from the
+epoch as float, and UTC timezone). Configuration values:</p>
+<ul>
+<li><code>ExecutionId</code>: Id of the execution (can be dinamically expanded from <code>@{ExecutionId}</code>)</li>
+<li><code>CSV</code>: Path of the CSV file to upload</li>
+<li><code>Measurement</code>: Measurement (table) where the results will be saved</li>
+<li><code>Delimiter</code>: CSV separator, defaults to <code>','</code>.</li>
+<li><code>Timestamp</code>: Name of the column that contains the row timestamp, defaults to <code>&quot;Timestamp&quot;</code>.</li>
+<li><code>Convert</code>: If True, try to convert the values to a suitable format (int, float, bool, str). Only 'True' and 'False'
+with any capitalization are converted to bool. If False, send all values as string. Defaults to True.</li>
+</ul>
+<h2 id="rundelay">Run.Delay</h2>
+<p>Adds a configurable time wait to an experiment execution. Has a single configuration value:</p>
+<ul>
+<li><code>Time</code>: Time to wait in seconds.</li>
+</ul>
+<h2 id="rundummy">Run.Dummy</h2>
+<p>Dummy action, will only display the values on the <code>Config</code> dictionary on the log</p>
+<h2 id="runevaluate">Run.Evaluate</h2>
+<p>Evaluates <code>Expression</code>, and publishes the generated result as the <code>Key</code> variable. Configuration values:</p>
+<ul>
+<li><code>Key</code>: Name of the key used to save the generated value (as string).</li>
+<li><code>Expression</code>: Python expression that will be evaluated (as string). Variable expansion can be used for specifying
+runtime values.</li>
+</ul>
+<blockquote>
+<p>⚠ This task makes use of the <a href="https://docs.python.org/3/library/functions.html#eval">eval</a> built-in function:</p>
+<ul>
+<li>The <code>Expression</code> can execute arbitrary code.</li>
+<li>Since the test cases are defined by the platform operators it is expected that no dangerous code will be executed,
+however, <strong>exercise extreme caution, specially if variable expansion is used</strong> as part of the expression.</li>
+</ul>
+</blockquote>
+<p>The following is an example of the use of this task:</p>
+<pre><code class="language-yaml">   <span class="hljs-bullet">-</span> <span class="hljs-attr">Order:</span> <span class="hljs-number">1</span>
+     <span class="hljs-attr">Task:</span> <span class="hljs-string">Run.Publish</span>
+     <span class="hljs-attr">Config:</span> { <span class="hljs-attr">VAR:</span> <span class="hljs-number">4</span> }
+   <span class="hljs-bullet">-</span> <span class="hljs-attr">Order:</span> <span class="hljs-number">2</span>
+     <span class="hljs-attr">Task:</span> <span class="hljs-string">Run.Evaluate</span>
+     <span class="hljs-attr">Config:</span>
+       <span class="hljs-attr">Key:</span> <span class="hljs-string">VAR</span>
+       <span class="hljs-attr">Expression:</span> <span class="hljs-string">&lt;See</span> <span class="hljs-string">below&gt;</span>
+</code></pre>
+<p>After the execution of both tasks, the value of <code>VAR</code> will be, depending on the expression:</p>
+<ul>
+<li>For <code>1+@[VAR]</code>: &quot;5&quot;</li>
+<li>For <code>1+@[VAR].0</code>: &quot;5.0&quot;</li>
+<li>For <code>1+@[VAR].0&gt;3</code>: &quot;True&quot;</li>
+<li>For <code>self</code>: &quot;&lt;Executor.Tasks.Run.evaluate.Evaluate object at 0x...&gt;&quot;</li>
+</ul>
+<h2 id="runmessage">Run.Message</h2>
+<p>Displays a message on the log, with the configured severity. Configuration values:</p>
+<ul>
+<li><code>Severity</code>: Severity level (<code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>, <code>ERROR</code>, <code>CRITICAL</code>)</li>
+<li><code>Message</code>: Text of the message</li>
+</ul>
+<h2 id="runpublish">Run.Publish</h2>
+<p>Saves a value (identified with a name) for use in another task that runs later. The value can be retrieved using
+the <code>@[key]</code> or <code>@[Publish.key]</code> variable expansion. If the key is not defined at the time of expansion it will
+be replaced by the string <code>&lt;&lt;UNDEFINED&gt;&gt;</code> unless another default is defined using <code>@[key:default]</code>.
+In the case of this Task the <code>Config</code> dictionary contains the keys and values that will be published. For example,
+the following tasks:</p>
+<pre><code class="language-yaml"><span class="hljs-bullet">-</span> <span class="hljs-attr">Order:</span> <span class="hljs-number">5</span>
+  <span class="hljs-attr">Task:</span> <span class="hljs-string">Run.Publish</span>
+  <span class="hljs-attr">Config:</span> { <span class="hljs-attr">Publish1:</span> <span class="hljs-string">&quot;Text&quot;</span>, <span class="hljs-attr">Publish2:</span> <span class="hljs-number">1</span> }
+<span class="hljs-bullet">-</span> <span class="hljs-attr">Order:</span> <span class="hljs-number">10</span>
+  <span class="hljs-attr">Task:</span> <span class="hljs-string">Run.Message</span>
+  <span class="hljs-attr">Config:</span> { <span class="hljs-attr">Severity:</span> <span class="hljs-string">INFO</span>, <span class="hljs-attr">Message:</span> <span class="hljs-string">&quot;1: @[Publish1]; 2: @[Publish.Publish2]; 3: @[Publish3]; 4: @[Publish.Publish4:NoProblem]&quot;</span> }
+</code></pre>
+<p>Will produce this message in the log:</p>
+<p><code>- INFO - 1: Text; 2: 1; 3: &lt;&lt;UNDEFINED&gt;&gt;; 4: NoProblem</code></p>
+<blockquote>
+<p>Note that keys that are common to all tasks (for example, <code>VerdictOnError</code>) will be ignored.</p>
+</blockquote>
+<h2 id="runpublishfromfile--runpublishfromprevioustasklog">Run.PublishFromFile / Run.PublishFromPreviousTaskLog</h2>
+<p>Reads the contents of a file / the log of the previous task and looks for lines that match the specified regular
+expression pattern, publishing the groups found. If multiple matches are found only the last one is saved.
+Configuration values:</p>
+<ul>
+<li><code>Pattern</code>: Regular expression to try to match, following
+<a href="https://docs.python.org/3/library/re.html#regular-expression-syntax">Python's syntax</a>.</li>
+</ul>
+<blockquote>
+<p>Extra escaping may be needed inside the regular expression, for example <code>\d</code> needs to be written as <code>\\d</code>, otherwise
+an exception will occur when parsing the YAML file (&quot;unknown escape character 'd'&quot;).</p>
+</blockquote>
+<ul>
+<li><code>Keys</code>: List of (index, key) pairs, where index refers to the regex group, and key is the identifier to use
+when publishing. If not included, nothing will be published (an empty list will be used). This can be useful
+if only setting a Verdict is needed.</li>
+</ul>
+<blockquote>
+<ul>
+<li>Groups are defined within regular expressions using '(' ... ')'.</li>
+<li>Group 0 always refers to the complete matched line, manually specified groups start at index 1.</li>
+<li>While writing the <code>Keys</code> in the task configuration note that YAML does not have a syntax for tuples, use lists of two elements instead.</li>
+</ul>
+</blockquote>
+<ul>
+<li><code>VerdictOnMatch</code>: Verdict to set if a line matches the regular expression. Defaults to <code>NotSet</code>.</li>
+<li><code>VerdictOnNoMatch</code>: Verdict to set if no line matches the regular expression. Defaults to <code>NotSet</code>.</li>
+<li><code>Path</code> (only for Run.PublishFromFile): Path of the file to read</li>
+</ul>
+<h2 id="runrestapi">Run.RestApi</h2>
+<p>Provides direct access to the internal RestClient functionality, avoiding the need of using external utilities such as
+<code>curl</code> for simple requests. Configuration values:</p>
+<ul>
+<li><code>Host</code>: Location where the REST API is listening</li>
+<li><code>Port</code>: Port where the REST API is listening</li>
+<li><code>Endpoint</code>: Specific API endpoint where the request will be sent</li>
+<li><code>Https</code>: Whether to use HTTPS or not, defaults to False</li>
+<li><code>Insecure</code>: Whether to ignore certificate errors when using HTTPS, defaults to False</li>
+<li><code>Method</code>: REST method to use, currently suported methods are <code>GET</code>, <code>POST</code>, <code>PATCH</code>, <code>DELETE</code></li>
+<li><code>Payload</code>: Data to send in JSON format (as a single string), defaults to <code>'{}'</code></li>
+<li><code>PayloadMode</code>: Field where the payload will be sent, possible values are:
+<ul>
+<li><code>Data</code>: The payload is saved in the <code>Body</code> field of the request. Also adds the <code>Content-Type=application/json</code> header</li>
+<li><code>Form</code>: The payload is saved on the <code>Form</code> field of the request</li>
+</ul>
+</li>
+<li><code>Responses</code>: Set of expected responses as a single value or a list. The special value <code>Success</code> indicates any possible
+success response (2xx). Set to <code>None</code> to disable the check.</li>
+<li><code>Timeout</code>: Maximum time in seconds to wait for a response</li>
+<li><code>Headers</code>: Additional headers to add to the request</li>
+</ul>
+<h2 id="runrobotframework">Run.RobotFramework</h2>
+<p>Execute one or more test suites using an external Robot Framework instance. It is recommended to store and configure
+Robot Framework in a dedicated virtualenv, where all the required dependencies (for example <code>robotframework-requests</code>)
+are also installed. Configuration values:</p>
+<ul>
+<li><code>Executable</code>: Absolute path to the Robot Framework executable. On a pre-configured virtualenv this file is usually
+<code>&lt;venv&gt;/bin/robot</code> or <code>&lt;venv&gt;/Scripts/robot.exe</code></li>
+<li><code>Paths</code>: Either a single path (string) or a list of paths, each with the location of one of the test suites to run.</li>
+<li><code>CWD</code>: Working directory, usually the root folder where the test suites are stored. If <code>GatherResults</code> is set to
+<code>False</code> the generated report files will be left in this folder.</li>
+<li><code>Variables</code>: Dictionary that contains the variables to be passed to Robot Framework. If present, the contents will be
+used for generating a YAML file that is passed through the <code>--variablefile (-V)</code> parameter.</li>
+</ul>
+<blockquote>
+<p>The <code>PyYAML</code> module must be installed in the Robot Framework virtualenv in order to make use of this option, otherwise
+a runtime error will be reported and the file will not be read.</p>
+</blockquote>
+<ul>
+<li><code>GatherResults</code>: Whether to store the generated files along with other files created by the experiment or not.
+These reports will be compressed in a single zip file identified by the <code>Identifier</code> parameter. <code>True</code> by default.</li>
+<li><code>Identifier</code>: Name used to identify a particular Robot Framework execution, in order to avoid overwriting results
+for TestCases that include multiple invocations. If not set, it will be automatically generated from the time as
+<code>RobotFwHHMMSS</code>, where HHMMSS corresponds to the hour, minutes and seconds in UTC.</li>
+<li><code>VerdictOnPass</code>: Verdict to set if all tests are completed successfully. Defaults to <code>Pass</code>.</li>
+<li><code>VerdictOnFail</code>: Verdict to set if any test in the suite fails. Defaults to <code>Fail</code>.</li>
+</ul>
+<h2 id="runsingleslicecreationtime">Run.SingleSliceCreationTime</h2>
+<p>Sends the Slice Creation Time reported by the Slice Manager to InfluxDb. This task will not perform any deployment
+by itself, and will only read the values for a slice deployed during the experiment pre-run stage.
+Configuration values:</p>
+<ul>
+<li><code>ExecutionId</code>: Id of the execution (can be dinamically expanded from <code>@{ExecutionId}</code>)</li>
+<li><code>WaitForRunning</code>: Boolean, wait until the Slice Manager reports that the slice is running, or retrieve results immediately</li>
+<li><code>Timeout</code>: 'WaitForRunning' timeout in (aprox) seconds</li>
+<li><code>SliceId</code>: Slice ID to check (can be dinamically expanded from <code>@{SliceId}</code>)</li>
+</ul>
+<h2 id="runslicecreationtime">Run.SliceCreationTime</h2>
+<p>Repeats a cycle of slice creation and deletion for a configured number of times, obtaining the Slice Creation Time on
+each iteration and sending the values to the configured InfluxDb database. This task does not take into account the
+slices deployed during the experiment's pre-run stage (if any). This task uses a local NEST file to describe the
+slice to be deployed. Configuration values:</p>
+<ul>
+<li><code>ExecutionId</code>: Id of the execution (can be dynamically expanded from <code>@{ExecutionId}</code>)</li>
+<li><code>NEST</code>: Absolute path of the NEST file to use</li>
+<li><code>Iterations</code>: Number of iterations. Defaults to 25</li>
+<li><code>Timeout</code>: Timeout in (aprox) seconds to wait until the slice is running or deleted before skipping the iteration.
+If not specified or set to None the task will continue indefinitely.</li>
+<li><code>CSV</code>: If set, save the generated results to a CSV file in the specified path. In case of error while sending the
+results to InfluxDb a CSV file will be forcibly created on <code>&quot;@{TempFolder}/SliceCreationTime.csv&quot;</code> (only if not set,
+otherwise the file will be created as configured).</li>
+</ul>
+<h2 id="runtapexecute">Run.TapExecute</h2>
+<p>Executes a TAP TestPlan, with the possibility of configuring external parameters. Configuration values:</p>
+<ul>
+<li><code>TestPlan</code>: Path (absolute) of the testplan file.</li>
+<li><code>GatherResults</code>: Indicates whether to compress the generated CSV files to a Zip file (see below)</li>
+<li><code>Externals</code>: Dictionary of external parameters</li>
+</ul>
+<h6 id="gathering-generated-results">Gathering generated results</h6>
+<p>If selected, the task will attempt to retrieve all the results generated by the testplan, saving them to a Zip file
+that will be included along with the logs once the execution finishes. The task will look for the files in the TAP
+Results folder, inside a sub-folder that corresponds with the experiment's execution ID, for this reason, it is
+necessary to add a MultiCSV result listener to TAP that has the following (recommended) <code>File Path</code> configuration:</p>
+<pre><code>Results\{Identifier}\{Date}-{ResultType}-{Identifier}.csv
+</code></pre>
+<h2 id="runupgradeverdict">Run.UpgradeVerdict</h2>
+<p>Sets a particular verdict for this task, which in turn upgrades the verdict of the experiment execution, based
+on the value of a published variable. Configuration values:</p>
+<ul>
+<li><code>Key</code>: Name of the key to compare</li>
+<li><code>Pattern</code>: Regular expression to try to match against the value of <code>Key</code>, following
+<a href="https://docs.python.org/3/library/re.html#regular-expression-syntax">Python's syntax</a></li>
+<li><code>VerdictOnMissing</code>: Verdict to set if <code>Key</code> is not found. Defaults to <code>NotSet</code>.</li>
+<li><code>VerdictOnMatch</code>: Verdict to set if the value matches the regular expression. Defaults to <code>NotSet</code>.</li>
+<li><code>VerdictOnNoMatch</code>: Verdict to set if the value does not match the regular expression. Defaults to <code>NotSet</code>.</li>
+</ul>
+<h2 id="runupgradeverdict-1">Run.UpgradeVerdict</h2>
+<p>Sets a particular verdict for this task, which in turn upgrades the verdict of the experiment execution, based
+on the value of a published variable. Configuration values:</p>
+<ul>
+<li><code>Key</code>: Name of the key to compare</li>
+<li><code>Pattern</code>: Regular expression to try to match against the value of <code>Key</code>, following
+<a href="https://docs.python.org/3/library/re.html#regular-expression-syntax">Python's syntax</a></li>
+<li><code>VerdictOnMissing</code>: Verdict to set if <code>Key</code> is not found. Defaults to <code>NotSet</code>.</li>
+<li><code>VerdictOnMatch</code>: Verdict to set if the value matches the regular expression. Defaults to <code>NotSet</code>.</li>
+<li><code>VerdictOnNoMatch</code>: Verdict to set if the value does not match the regular expression. Defaults to <code>NotSet</code>.</li>
+</ul>
+
+            
+            
+        </body>
+        </html>
