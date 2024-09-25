@@ -6,10 +6,7 @@ from Helper import utils, Level
 import time
 import threading
 
-# Queue to handle control messages
-cola = utils.cola
-
-class telegraf_ToInflux(Task):
+class TelegrafToInflux(Task):
     
     def __init__(self, logMethod, parent, params):
         # Initialize the Task superclass and define the expected parameters
@@ -185,12 +182,7 @@ class telegraf_ToInflux(Task):
         tcp_thread = threading.Thread(target=self.tcp_handler, args=(stop_event,))
         tcp_thread.start()
 
-        ready = ""
-        while ready != stop:
-            if not cola.empty():
-                ready = cola.get_nowait()
-                if ready != stop:
-                    cola.put_nowait(ready)
+        while stop not in utils.task_list:
             time.sleep(1)
 
         stop_event.set()
