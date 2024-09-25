@@ -1,10 +1,10 @@
 import threading
-import queue
 from Helper import influx
 from datetime import timezone, datetime
 from typing import Union, Dict, Any
 
-cola = queue.Queue()
+task_list = []
+
 locks = threading.Lock()
 
 def _convert(value: Any) -> Union[int, float, bool, str, Dict[str, Any]]:
