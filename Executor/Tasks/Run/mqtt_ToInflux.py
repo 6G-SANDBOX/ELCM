@@ -3,42 +3,39 @@ import paho.mqtt.client as mqtt
 import json
 from Helper import utils, Level
 from Settings import MQTTConfig
-
-# Utility for managing the queue (cola) to handle control signals
-cola = utils.cola
-
-class mqtt_ToInflux(Task):
+class MqttToInflux(Task):
 
     def __init__(self, logMethod, parent, params):
         # Initialize the Task superclass with necessary parameters
         super().__init__("MQTT", parent, params, logMethod, None)
         # Define the rules for expected parameters, including which are mandatory
         self.paramRules = {
-            'ExecutionId': (None, True), # Unique ID for execution, required
-            'BROKER': (None, True), # MQTT broker address, required
-            'PORT': (None, True), # MQTT broker port, required
-            'ACCOUNT': (False, True), # Account for authentication, optional
-            'TOPIC': (None, True), # MQTT topic to subscribe to, required
-            'STOP': (None, True), # Stop signal key, required
-            'MEASUREMENT': (None, True), # InfluxDB measurement name, required
-            'CERTIFICATES': (None, False), # Path to SSL certificates, optional
-            'ENCRYPTION': (False, True)    # Flag for using SSL/TLS, required
+            'ExecutionId': (None, True),   # Unique ID for execution, required
+            'BROKER': (None, True),         # MQTT broker address, required
+            'PORT': (None, True),           # MQTT broker port, required
+            'ACCOUNT': (False, True),       # Account for authentication, required
+            'TOPIC': (None, True),          # MQTT topic to subscribe to, required
+            'STOP': (None, True),           # Stop signal key, required
+            'MEASUREMENT': (None, True),    # InfluxDB measurement name, required
+            'CERTIFICATES': (None, False),  # Path to SSL certificates, optional
+            'ENCRYPTION': (False, True)     # Flag for using SSL/TLS, required
         }
 
     def save_to_influx(self, message):
-        
+        # Decode and parse the MQTT message payload
         data = json.loads(message.payload.decode('utf-8'))
         measurement = self.params['MEASUREMENT']
         # Flatten the data before sending to InfluxDB
         flattened_data = utils.flatten_json(data)
-        
+
         for key, value, timestamp in flattened_data:
-                        
+            # Convert integer values to float
             if isinstance(value, int):
                 value = float(value)
-            measurement_data = {key: value}    
-            
-            try:    
+            measurement_data = {key: value}
+
+            try:
+                # Send the flattened data to InfluxDB
                 utils.send_to_influx(measurement, measurement_data, timestamp, self.params['ExecutionId'])
             except Exception as e:
                 self.Log(Level.ERROR, f"Exception consuming MQTT messages: {e}")
@@ -55,9 +52,7 @@ class mqtt_ToInflux(Task):
 
     # Callback function when a message is received from the MQTT broker
     def on_message(self, client, userdata, msg):
-        
-        self.save_to_influx(msg) # Save the message to InfluxDB
-        
+        self.save_to_influx(msg)  # Save the message to InfluxDB
 
     def Run(self):
         client = mqtt.Client()
@@ -75,30 +70,22 @@ class mqtt_ToInflux(Task):
         account = self.params['ACCOUNT']
 
         # Configure TLS/SSL and authentication if required
-        if not isinstance(encryption, bool):
-            self.Log(Level.ERROR, f"Exception creating MQTT: bool_1")
-            return
-        if not isinstance(account, bool):
-            self.Log(Level.ERROR, f"Exception creating MQTT: bool_2")
+        if not isinstance(encryption, bool) or not isinstance(account, bool):
+            self.Log(Level.ERROR, "Exception creating MQTT: Invalid type for encryption or account")
             return
 
-        if encryption and account:
-            client.tls_set(
-                ca_certs=base_path + "ca.pem",
-                certfile=base_path + "client-cert.pem",
-                keyfile=base_path + "client-key.pem"
-            )
+        # Prepare MQTT client for connection based on encryption and account conditions
+        tls_args = {
+            'ca_certs': base_path + "ca.pem",
+            'certfile': base_path + "client-cert.pem",
+            'keyfile': base_path + "client-key.pem"
+        } if encryption else {}
+
+        if account:
             client.username_pw_set(user, password)
 
-        elif encryption and not account:
-            client.tls_set(
-                ca_certs=base_path + "ca.pem",
-                certfile=base_path + "client-cert.pem",
-                keyfile=base_path + "client-key.pem"
-            )
-
-        elif not encryption and account:
-            client.username_pw_set(user, password)
+        if encryption:
+            client.tls_set(**tls_args)
 
         # Set the callback methods for connection and message events
         client.on_connect = self.on_connect
@@ -107,7 +94,6 @@ class mqtt_ToInflux(Task):
         try:
             client.connect(broker, port, 60)
             self.Log(Level.INFO, f"MQTT successfully connected")
-
         except Exception as e:
             self.Log(Level.ERROR, f"Exception connecting to MQTT: {e}")
             self.SetVerdictOnError()
@@ -115,16 +101,11 @@ class mqtt_ToInflux(Task):
         
         # Start the MQTT client's network loop
         client.loop_start()
-
-        ready = ""
         
         # Main loop to check for a stop signal from the control queue
-        while ready != stop:
-            if not cola.empty():
-                ready = cola.get_nowait()
-                if ready != stop:
-                    cola.put_nowait(ready)
-        
+        while stop not in utils.task_list:
+            pass
+        utils.task_list.remove(stop)
         # Stop the MQTT client's network loop and disconnect
         client.loop_stop()
         client.disconnect()
