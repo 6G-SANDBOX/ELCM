@@ -1,9 +1,7 @@
 from Task import Task
 from Helper import utils
 
-cola=utils.cola
-
-class stop_task(Task):
+class StopTask(Task):
 
 
     def __init__(self, logMethod, parent, params):
@@ -17,4 +15,5 @@ class stop_task(Task):
 
     def Run(self):
 
-        cola.put_nowait(self.params['NAME']+"_"+str(self.params['ExecutionId']))
+        new_task=self.params['NAME']+"_"+str(self.params['ExecutionId'])
+        utils.task_list.append(new_task)
