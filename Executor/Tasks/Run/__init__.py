@@ -14,4 +14,4 @@ from .rest_api import RestApi
 from .upgrade_verdict import UpgradeVerdict
 from .evaluate import Evaluate
 from .robot_framework import RobotFramework
-from .deploy_experiment import DeployExperiment
+from .helm_deploy import HelmDeploy
