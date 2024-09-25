@@ -6,9 +6,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 from Settings import PROMETHEUSConfig
 
-# Utility function to manage a queue (cola) for handling control messages
-cola = utils.cola
-
 class PrometheusToInflux(Task):
 
     def __init__(self, logMethod, parent, params):
@@ -29,32 +26,20 @@ class PrometheusToInflux(Task):
 
     def init_prometheus_session(self, URL_host, PORT_host, base_path, encryption, account, user, password):
         try:
-
-            if not isinstance(encryption, bool):
-                self.Log(Level.ERROR, f"Exception prometheus_bool: bool_1")
+            # Validate encryption and account types
+            if not isinstance(encryption, bool) or not isinstance(account, bool):
+                self.Log(Level.ERROR, "Exception creating PROMETHEUS: Invalid type for encryption or account")
                 return
-            if not isinstance(account, bool):
-                self.Log(Level.ERROR, f"Exception prometheus_bool: bool_2")
-                return
+            
+            # Construct the base URL
+            url = f"{'https' if encryption else 'http'}://{URL_host}:{PORT_host}"
+            session = requests.Session()
 
-            if encryption and account:
-                url = f"https://{URL_host}:{PORT_host}"
-                session = requests.Session()
-                session.cert = (base_path + 'client-cert.pem', base_path + 'client-key.pem')
-                session.verify = base_path + 'ca.pem'
-                session.auth = HTTPBasicAuth(user, password)
-            elif encryption and not account:
-                url = f"https://{URL_host}:{PORT_host}"
-                session = requests.Session()
-                session.cert = (base_path + 'client-cert.pem', base_path + 'client-key.pem')
-                session.verify = base_path + 'ca.pem'
-            elif not encryption and account:
-                url = f"http://{URL_host}:{PORT_host}"
-                session = requests.Session()
-                session.auth = HTTPBasicAuth(user, password)
-            else:
-                url = f"http://{URL_host}:{PORT_host}"
-                session = None
+            # Set up session authentication and certificate paths based on conditions
+            session.cert = (base_path + 'client-cert.pem', base_path + 'client-key.pem') if encryption else None
+            session.verify = base_path + 'ca.pem' if encryption else None
+            session.auth = HTTPBasicAuth(user, password) if account else None
+            
             return {'url': url, 'session': session}
         except Exception as e:
             self.Log(Level.ERROR, f"Error initializing Prometheus session: {e}")
@@ -84,26 +69,16 @@ class PrometheusToInflux(Task):
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
-   
 
     def store_query_data(self, data, query, data_dict):
-        
         for result in data:
-            
-            if 'values' in result:
-                entries = result['values']
-            elif 'value' in result:
-                entries = [result['value']]
-            else:
+            entries = result.get('values') or [result.get('value')]
+            if not entries:
                 continue  
 
             for entry in entries:
-
                 timestamp = int(entry[0])
-                value = entry[1]
-                
-                if isinstance(value, int):
-                    value = float(value)
+                value = float(entry[1]) if isinstance(entry[1], int) else entry[1]
 
                 if timestamp not in data_dict:
                     data_dict[timestamp] = {query: value}
@@ -111,11 +86,8 @@ class PrometheusToInflux(Task):
                     data_dict[timestamp][query] = value
 
     def send_data_to_influx(self, data_dict, measurement, executionId):
-
         for timestamp, data in data_dict.items():
-
             flat_data = utils.flatten_prometheus_json(data)
-
             try:
                 utils.send_to_influx(measurement, flat_data, timestamp, executionId)
             except Exception as e:
@@ -155,26 +127,22 @@ class PrometheusToInflux(Task):
             self.SetVerdictOnError()
             return
 
-        ready = ""
-        while ready != stop:
-            if not cola.empty():
-                ready = cola.get_nowait()
-                if ready != stop:
-                    cola.put_nowait(ready)
-
+        while stop not in utils.task_list:
+            pass
+        utils.task_list.remove(stop)
         end_time = datetime.now()
 
         # Process both range and custom queries
         data_dict = {}
 
-        # Handle range queries
-        if queries_range!=None:
+        # Handle range queries if provided
+        if queries_range is not None:
             self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
 
-        # Handle custom queries (instant queries)
-        if queries_custom!=None:
+        # Handle custom queries if provided
+        if queries_custom is not None:
             self.process_custom_queries(prometheus, queries_custom, data_dict)
-            
-        if queries_range!=None or queries_custom!=None:
-            # Send the data to InfluxDB
+
+        # Send the data to InfluxDB if any queries were processed
+        if queries_range is not None or queries_custom is not None:
             self.send_data_to_influx(data_dict, measurement, executionId)
