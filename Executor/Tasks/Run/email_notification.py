@@ -3,7 +3,7 @@ import smtplib
 from email.mime.text import MIMEText
 from Settings import EmailConfig
 
-class email_notification(Task):
+class EmailNotification(Task):
 
 
     def __init__(self, logMethod, parent, params):
