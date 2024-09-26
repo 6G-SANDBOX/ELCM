@@ -207,4 +207,4 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 - `Action`: Action to be performed by the ELCM, one between "Deploy", "Delete" and "Rollback"
 - `Namespace`: Name of the namespace where it will be deployed, if omitted, default is applied
 - `ReleaseName`: Chart release name
-- `HelmCharPath`: 
+- `HelmChartPath`: Path of the HelmChart to be deployed
