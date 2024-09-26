@@ -100,8 +100,7 @@ class TapConfig(validable):
         return self._keyOrDefault('EnsureAdbClosed')
 
     @property
-    def Path(self):
-        return realpath(join(self.Folder, self.Exe))
+    def Path(self): return realpath(join(self.Folder, self.Exe))
 
     @property
     def Validation(self) -> List[Tuple['Level', str]]:
@@ -199,12 +198,12 @@ class Metadata(validable):
 
 
 class Config(ConfigBase):
-    # FILENAME = 'config.yml'
+    FILENAME = 'config.yml'
 
     data = None
     Validation: List[Tuple['Level', str]] = []
 
-    def __init__(self, forceReload=False):
+    def __init__(self, forceReload = False):
         super().__init__('config.yml', 'Settings/default_config')
         if self.data is None or forceReload:
             Config.data = self.Reload()
