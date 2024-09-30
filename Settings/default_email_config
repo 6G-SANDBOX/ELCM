@@ -1,3 +1,5 @@
 EMAIL_Api:
   User: "email@email.com"
   Password: "password"
+  Port: "587"
+  Server: "server"
