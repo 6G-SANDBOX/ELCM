@@ -1,4 +1,5 @@
-from influxdb import InfluxDBClient
+from influxdb import InfluxDBClient as InfluxDBClient_v1
+from influxdb_client import InfluxDBClient as InfluxDBClient_v2
 from Settings import Config
 from typing import Dict, List, Union
 from datetime import datetime, timezone
@@ -65,15 +66,22 @@ class InfluxDb:
     client = None
     database = None
     baseTags = {}
+    version = None
 
     @classmethod
     def initialize(cls):
+        cls.version = "v2"
         config = Config()
-
         influx = config.InfluxDb
         try:
-            cls.client = InfluxDBClient(influx.Host, influx.Port,
-                                        influx.User, influx.Password, influx.Database)
+            if cls.version == "v1":
+                cls.client = InfluxDBClient_v1(influx.Host, influx.Port,
+                                               influx.User, influx.Password, influx.Database)
+            elif cls.version == "v2":
+                cls.client = InfluxDBClient_v2(url='http://127.0.0.1:8086',
+                                               token="pAwR_VmaV5wxxfcWrVOG5qQEchSgtQwSSTSREAbe43XNSLEzguuoSq1v54z08axQla4EwHBnfIU2j-4dAayjyQ==",
+                                               org='UMA')
+
         except Exception as e:
             raise Exception(f"Exception while creating Influx client, please review configuration: {e}") from e
 
@@ -98,7 +106,10 @@ class InfluxDb:
             cls.initialize()
 
         payload.Tags.update(cls.baseTags)
-        cls.client.write_points(payload.Serialized)
+        if cls.version == 'v1':
+            cls.client.write_points(payload.Serialized)
+        elif cls.version == 'v2':
+            cls.client.write_api().write(bucket=cls.database, org='UMA', record=payload.Serialized)
 
     @classmethod
     def PayloadToCsv(cls, payload: InfluxPayload, outputFile: str):
@@ -122,11 +133,15 @@ class InfluxDb:
     def CsvToPayload(cls, measurement: str, csvFile: str, delimiter: str, timestampKey: str,
                      tryConvert: bool = True, keysToRemove: List[str] = None) -> InfluxPayload:
         def _convert(value: str) -> Union[int, float, bool, str]:
-            try: return int(value)
-            except ValueError: pass
+            try:
+                return int(value)
+            except ValueError:
+                pass
 
-            try: return float(value)
-            except ValueError: pass
+            try:
+                return float(value)
+            except ValueError:
+                pass
 
             return {'true': True, 'false': False}.get(value.lower(), value)
 
@@ -155,7 +170,7 @@ class InfluxDb:
                     timestamp = datetime.fromtimestamp(timestampValue, tz=timezone.utc)
                 except (OSError, ValueError):
                     # value outside of bounds, maybe because it's specified in milliseconds instead of seconds
-                    timestamp = datetime.fromtimestamp(timestampValue/1000.0, tz=timezone.utc)
+                    timestamp = datetime.fromtimestamp(timestampValue / 1000.0, tz=timezone.utc)
 
                 point = InfluxPoint(timestamp)
                 for key, value in row.items():
@@ -175,7 +190,6 @@ class InfluxDb:
 
         reply = cls.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
         return [e['name'] for e in reply['measurements']]
-
 
     @classmethod
     def GetMeasurement(cls, executionId: int, measurement: str) -> List[InfluxPayload]:
@@ -224,4 +238,3 @@ class InfluxDb:
             res.append(payload)
 
         return res
-
