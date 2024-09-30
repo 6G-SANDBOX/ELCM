@@ -10,9 +10,7 @@ class EmailNotification(Task):
         super().__init__("EMAIL", parent, params, logMethod, None)
         self.paramRules = {
             'ExecutionId': (None, True),
-            'EMAIL': (None, True),
-            'SERVER': (None,True),
-            'PORT': (None,True)
+            'EMAIL': (None, True)
         }
     
     def Run(self):
@@ -22,9 +20,9 @@ class EmailNotification(Task):
         info = email_info.user
         email_user = info.get("User", None)
         email_password = info.get("Password", None)
+        email_port = int(info.get("Port", None))
+        email_server = info.get("Server", None)
         email=self.params['EMAIL']
-        email_server=self.params['SERVER']
-        email_port=int(self.params['PORT'])
         
         server_smtp = email_server
         port = email_port
