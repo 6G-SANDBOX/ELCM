@@ -1,25 +1,24 @@
-from Task import Task
 from kafka import KafkaConsumer
 import json
 from Helper import utils, Level
 from Settings import KAFKAConfig
-
-class KafkaConsummerToInflux(Task):
+from .to_influx import ToInfluxBase
+class KafkaConsummerToInflux(ToInfluxBase):
     # Initialize the Task superclass with necessary parameters
     def __init__(self, logMethod, parent, params):
         super().__init__("KAFKA", parent, params, logMethod, None)
         # Define the rules for expected parameters, including which are mandatory
         self.paramRules = {
             'ExecutionId': (None, True), # Unique ID for execution, required
-            'IP': (None, True), # Kafka server IP address, required
-            'PORT': (None, True), # Kafka server port, required
-            'TOPIC': (None, True), # Kafka topic to subscribe to, required
-            'MEASUREMENT': (None, True), # InfluxDB measurement name, required
-            'STOP': (None, True), # Stop signal key, required
-            'ACCOUNT': (False, True), # Account for authentication, required
-            'GROUP_ID': (None, False), # Kafka consumer group ID, optional
-            'CERTIFICATES': (None, False), # Path to SSL certificates, optional
-            'ENCRYPTION': (False, True)    # Flag for using SSL/TLS, required
+            'Ip': (None, True), # Kafka server IP address, required
+            'Port': (None, True), # Kafka server port, required
+            'Topic': (None, True), # Kafka topic to subscribe to, required
+            'Measurement': (None, True), # InfluxDB measurement name, required
+            'Stop': (None, True), # Stop signal key, required
+            'Account': (False, True), # Account for authentication, required
+            'GroupId': (None, False), # Kafka consumer group ID, optional
+            'Certificates': (None, False), # Path to SSL certificates, optional
+            'Encryption': (False, True)    # Flag for using SSL/TLS, required
         }
 
     def Run(self):
@@ -29,15 +28,15 @@ class KafkaConsummerToInflux(Task):
         user = info.get("User", None)
         password = info.get("Password", None)
         executionId = self.params['ExecutionId']
-        measurement = self.params["MEASUREMENT"]
-        IP_host = self.params['IP']
-        PORT_host = self.params['PORT']
-        TOPIC_Host = self.params['TOPIC']
-        stop = self.params['STOP'] + "_" + str(executionId)
-        group_id_opt = self.params['GROUP_ID']
-        base_path = self.params['CERTIFICATES']
-        encryption = self.params['ENCRYPTION']
-        account = self.params['ACCOUNT']
+        measurement = self.params["Measurement"]
+        IP_host = self.params['Ip']
+        PORT_host = self.params['Port']
+        TOPIC_Host = self.params['Topic']
+        stop = self.params['Stop'] + "_" + str(executionId)
+        group_id_opt = self.params['GroupId']
+        base_path = self.params['Certificates']
+        encryption = self.params['Encryption']
+        account = self.params['Account']
 
         # Create common arguments for KafkaConsumer
         consumer_args = {
@@ -87,14 +86,14 @@ class KafkaConsummerToInflux(Task):
             for message in consumer:
                 try:
                     data = message.value
-                    flattened_data = utils.flatten_json(data)
+                    flattened_data = self._flatten_json(data)
                     for key, value, timestamp in flattened_data:
                         # Convert integer values to float
                         if isinstance(value, int):
                             value = float(value)
                         measurement_data = {key: value}
                         # Send the flattened data to InfluxDB
-                        utils.send_to_influx(measurement, measurement_data, timestamp, executionId)
+                        self._send_to_influx(measurement, measurement_data, timestamp, executionId)
                     break
                 except Exception as e:
                     self.Log(Level.ERROR, f"Exception consuming KAFKA messages: {e}")

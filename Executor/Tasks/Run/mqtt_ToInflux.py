@@ -1,9 +1,10 @@
-from Task import Task
 import paho.mqtt.client as mqtt
 import json
 from Helper import utils, Level
 from Settings import MQTTConfig
-class MqttToInflux(Task):
+from .to_influx import ToInfluxBase
+
+class MqttToInflux(ToInfluxBase):
 
     def __init__(self, logMethod, parent, params):
         # Initialize the Task superclass with necessary parameters
@@ -11,22 +12,22 @@ class MqttToInflux(Task):
         # Define the rules for expected parameters, including which are mandatory
         self.paramRules = {
             'ExecutionId': (None, True),   # Unique ID for execution, required
-            'BROKER': (None, True),         # MQTT broker address, required
-            'PORT': (None, True),           # MQTT broker port, required
-            'ACCOUNT': (False, True),       # Account for authentication, required
-            'TOPIC': (None, True),          # MQTT topic to subscribe to, required
-            'STOP': (None, True),           # Stop signal key, required
-            'MEASUREMENT': (None, True),    # InfluxDB measurement name, required
-            'CERTIFICATES': (None, False),  # Path to SSL certificates, optional
-            'ENCRYPTION': (False, True)     # Flag for using SSL/TLS, required
+            'Broker': (None, True),         # MQTT broker address, required
+            'Port': (None, True),           # MQTT broker port, required
+            'Account': (False, True),       # Account for authentication, required
+            'Topic': (None, True),          # MQTT topic to subscribe to, required
+            'Stop': (None, True),           # Stop signal key, required
+            'Measurement': (None, True),    # InfluxDB measurement name, required
+            'Certificates': (None, False),  # Path to SSL certificates, optional
+            'Encryption': (False, True)     # Flag for using SSL/TLS, required
         }
 
     def save_to_influx(self, message):
         # Decode and parse the MQTT message payload
         data = json.loads(message.payload.decode('utf-8'))
-        measurement = self.params['MEASUREMENT']
+        measurement = self.params['Measurement']
         # Flatten the data before sending to InfluxDB
-        flattened_data = utils.flatten_json(data)
+        flattened_data = self._flatten_json(data)
 
         for key, value, timestamp in flattened_data:
             # Convert integer values to float
@@ -36,7 +37,7 @@ class MqttToInflux(Task):
 
             try:
                 # Send the flattened data to InfluxDB
-                utils.send_to_influx(measurement, measurement_data, timestamp, self.params['ExecutionId'])
+                self._send_to_influx(measurement, measurement_data, timestamp, self.params['ExecutionId'])
             except Exception as e:
                 self.Log(Level.ERROR, f"Exception consuming MQTT messages: {e}")
                 self.SetVerdictOnError()
@@ -46,7 +47,7 @@ class MqttToInflux(Task):
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             self.Log(Level.INFO, f"Successfully connected to the broker")
-            client.subscribe(self.params['TOPIC'])
+            client.subscribe(self.params['Topic'])
         else:
             self.Log(Level.INFO, f"Connection failed, return code: {rc}")
 
@@ -62,12 +63,12 @@ class MqttToInflux(Task):
         user = info.get("User", None)
         password = info.get("Password", None)
         executionId = self.params['ExecutionId']
-        broker = self.params['BROKER']
-        port = int(self.params['PORT'])
-        stop = self.params['STOP'] + "_" + str(executionId)
-        base_path = self.params['CERTIFICATES']
-        encryption = self.params['ENCRYPTION']
-        account = self.params['ACCOUNT']
+        broker = self.params['Broker']
+        port = int(self.params['Port'])
+        stop = self.params['Stop'] + "_" + str(executionId)
+        base_path = self.params['Certificates']
+        encryption = self.params['Encryption']
+        account = self.params['Account']
 
         # Configure TLS/SSL and authentication if required
         if not isinstance(encryption, bool) or not isinstance(account, bool):

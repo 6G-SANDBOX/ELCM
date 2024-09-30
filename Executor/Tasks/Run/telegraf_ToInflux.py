@@ -1,12 +1,11 @@
-from Task import Task
 import socket
 import ssl
 import json
 from Helper import utils, Level
 import time
 import threading
-
-class TelegrafToInflux(Task):
+from .to_influx import ToInfluxBase
+class TelegrafToInflux(ToInfluxBase):
     
     def __init__(self, logMethod, parent, params):
         # Initialize the Task superclass and define the expected parameters
@@ -14,15 +13,15 @@ class TelegrafToInflux(Task):
         
         # Define the rules for expected parameters
         self.paramRules = {
-            'MEASUREMENT': (None, True),    # Measurement name for InfluxDB, required
-            'STOP': (None, True),           # Stop signal, required
-            'ENCRYPTION': (False, True),    # Flag for SSL usage, required
-            'CERTIFICATES': (None, False)   # Path to SSL certificates, optional
+            'Measurement': (None, True),    # Measurement name for InfluxDB, required
+            'Stop': (None, True),           # Stop signal, required
+            'Encryption': (False, True),    # Flag for SSL usage, required
+            'Certificates': (None, False)   # Path to SSL certificates, optional
         }
 
         self.executionId = self.params['ExecutionId']
-        self.use_ssl = self.params.get('ENCRYPTION', False)  # Check if SSL is to be used
-        base_path = self.params['CERTIFICATES']
+        self.use_ssl = self.params.get('Encryption', False)  # Check if SSL is to be used
+        base_path = self.params['Certificates']
 
         # Paths to SSL certificate files
         self.certfile = base_path + "server-cert.pem"
@@ -32,8 +31,8 @@ class TelegrafToInflux(Task):
     # Method to process incoming data and send it to InfluxDB
     def save_to_influx(self, data):
         
-        measurement = self.params['MEASUREMENT']
-        flattened_data = utils.flatten_telegraf_json(data)  
+        measurement = self.params['Measurement']
+        flattened_data = self._flatten_telegraf_json(data)  
         timestamp = data['timestamp']
 
         for key in list(flattened_data.keys()):
@@ -43,7 +42,7 @@ class TelegrafToInflux(Task):
                 
         
         # Send the flattened data to InfluxDB
-        utils.send_to_influx(measurement, flattened_data, timestamp, self.executionId)
+        self._send_to_influx(measurement, flattened_data, timestamp, self.executionId)
         
     # Method to handle incoming TCP connections
     def tcp_handler(self, stop_event):
@@ -172,7 +171,7 @@ class TelegrafToInflux(Task):
     # Main method to start the task
     def Run(self):
         stop_event = threading.Event()
-        stop = self.params['STOP'] + "_" + str(self.executionId)
+        stop = self.params['Stop'] + "_" + str(self.executionId)
 
         if not isinstance(self.use_ssl, bool):
             self.Log(Level.ERROR, f"Exception telegraf bool")

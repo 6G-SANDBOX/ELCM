@@ -1,27 +1,26 @@
-from Task import Task
 from prometheus_api_client import PrometheusConnect
 from Helper import utils, Level
 from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
 from Settings import PROMETHEUSConfig
-
-class PrometheusToInflux(Task):
+from .to_influx import ToInfluxBase
+class PrometheusToInflux(ToInfluxBase):
 
     def __init__(self, logMethod, parent, params):
         super().__init__("PROMETHEUS", parent, params, logMethod, None)
         self.paramRules = {
             'ExecutionId': (None, True),
-            'URL': (None, True),
-            'PORT': (None, True),
-            'QUERIES_RANGE': (None, False),
-            'QUERIES_CUSTOM': (None, False),
-            'MEASUREMENT': (None, True),
-            'STOP': (None, True),
-            'STEP': (None, True),
-            'ACCOUNT': (False, True),
-            'CERTIFICATES': (None, False),
-            'ENCRYPTION': (False, True)
+            'Url': (None, True),
+            'Port': (None, True),
+            'QueriesRange': (None, False),
+            'QueriesCustom': (None, False),
+            'Measurement': (None, True),
+            'Stop': (None, True),
+            'Step': (None, True),
+            'Account': (False, True),
+            'Certificates': (None, False),
+            'Encryption': (False, True)
         }
 
     def init_prometheus_session(self, URL_host, PORT_host, base_path, encryption, account, user, password):
@@ -87,9 +86,9 @@ class PrometheusToInflux(Task):
 
     def send_data_to_influx(self, data_dict, measurement, executionId):
         for timestamp, data in data_dict.items():
-            flat_data = utils.flatten_prometheus_json(data)
+            flat_data = self._flatten_prometheus_json(data)
             try:
-                utils.send_to_influx(measurement, flat_data, timestamp, executionId)
+                self._send_to_influx(measurement, flat_data, timestamp, executionId)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error sending data to InfluxDB: {e}")
                 self.SetVerdictOnError()
@@ -97,21 +96,21 @@ class PrometheusToInflux(Task):
 
     def Run(self):
         executionId = self.params['ExecutionId']
-        URL_host = self.params['URL']
-        PORT_host = self.params['PORT']
-        queries_range = self.params['QUERIES_RANGE']
-        queries_custom = self.params['QUERIES_CUSTOM']
+        URL_host = self.params['Url']
+        PORT_host = self.params['Port']
+        queries_range = self.params['QueriesRange']
+        queries_custom = self.params['QueriesCustom']
         start_time = datetime.now()
-        stop = self.params['STOP'] + "_" + str(executionId)
-        step = self.params['STEP']
-        measurement = self.params['MEASUREMENT']
-        base_path = self.params['CERTIFICATES']
-        encryption = self.params['ENCRYPTION']
+        stop = self.params['Stop'] + "_" + str(executionId)
+        step = self.params['Step']
+        measurement = self.params['Measurement']
+        base_path = self.params['Certificates']
+        encryption = self.params['Encryption']
         prometheus_info = PROMETHEUSConfig()
         info = prometheus_info.user
         user = info.get("User", None)
         password = info.get("Password", None)
-        account = self.params['ACCOUNT']
+        account = self.params['Account']
 
         # Initialize the Prometheus session
         session = self.init_prometheus_session(URL_host, PORT_host, base_path, encryption, account, user, password)
