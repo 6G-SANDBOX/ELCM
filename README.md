@@ -88,7 +88,7 @@ Detailed usage documentation can be found in the `docs` folder of this repositor
 #### Appendix
 1. [REST Endpoints](/docs/A1_ENDPOINTS.md)
 2. [Experiment Descriptor](/docs/A2_EXPERIMENT_DESCRIPTOR.md)
-3. [Various configurations](/docs/5_VARIOUS_CONFIGURATIONS)
+3. [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
 
 ## Authors
 
