@@ -215,15 +215,15 @@ This task consumes messages from a Kafka topic and sends them to InfluxDB.
 
 **Configuration Parameters**:
 - `ExecutionId` (required): Unique identifier for the execution.
-- `IP` (required): IP address of the Kafka broker.
-- `PORT` (required): Port number for Kafka broker connection.
-- `TOPIC` (required): Kafka topic to consume messages from.
-- `MEASUREMENT` (required): InfluxDB measurement name where data will be sent.
-- `STOP` (required): Signal to stop message consumption.
-- `ACCOUNT` (required): Flag indicating when user and password is used (`True` or `False`).
-- `GROUP_ID` (optional): Kafka consumer group ID, used to manage offsets and group consumption.
-- `CERTIFICATES` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
-- `ENCRYPTION` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+- `Ip` (required): IP address of the Kafka broker.
+- `Port` (required): Port number for Kafka broker connection.
+- `Topic` (required): Kafka topic to consume messages from.
+- `Measurement` (required): InfluxDB measurement name where data will be sent.
+- `Stop` (required): Signal to stop message consumption.
+- `Account` (required): Flag indicating when user and password is used (`True` or `False`).
+- `GroupId` (optional): Kafka consumer group ID, used to manage offsets and group consumption.
+- `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
 
 **Encryption**:
 
@@ -243,15 +243,15 @@ Sequence:
     Task: Run.KafkaConsummerToInflux
     Config:
       ExecutionId: "@{ExecutionId}"
-      IP: "X.X.X.X"
-      PORT: "XXXX"
-      TOPIC: "my_topic"
-      MEASUREMENT: "my_measurement"
-      STOP: "stop_flag"
-      ACCOUNT: True       
-      GROUP_ID: "my_group"     # Optional
-      CERTIFICATES: "/path/to/certificates/"  # Optional, if encryption is used
-      ENCRYPTION: True        # Set to True if TLS/SSL is used, False otherwise
+      Ip: "X.X.X.X"
+      Port: "XXXX"
+      Topic: "my_topic"
+      Measurement: "my_measurement"
+      Stop: "stop_flag"
+      Account: True       
+      GroupId: "my_group"     # Optional
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 
 ```
 For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
@@ -268,14 +268,14 @@ This task subscribes to an MQTT topic, processes received messages, and sends th
 
 **Configuration Parameters**:
 - `ExecutionId` (required): Unique identifier for the execution.
-- `BROKER` (required): Address of the MQTT broker.
-- `PORT` (required): Port number for MQTT broker connection.
-- `ACCOUNT` (required): Flag indicating when user and password is used (`True` or `False`).
-- `TOPIC` (required): MQTT topic to subscribe to.
-- `STOP` (required): Signal to stop message processing.
-- `MEASUREMENT` (required): InfluxDB measurement name where data will be sent.
-- `CERTIFICATES` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
-- `ENCRYPTION` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+- `Broker` (required): Address of the MQTT broker.
+- `Port` (required): Port number for MQTT broker connection.
+- `Account` (required): Flag indicating when user and password is used (`True` or `False`).
+- `Topic` (required): MQTT topic to subscribe to.
+- `Stop` (required): Signal to stop message processing.
+- `Measurement` (required): InfluxDB measurement name where data will be sent.
+- `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
 
 **Encryption**:
 
@@ -295,14 +295,14 @@ Sequence:
     Task: Run.MqttToInflux
     Config:
       ExecutionId: "@{ExecutionId}"
-      BROKER: "mqtt_broker_address"
-      PORT: "8885"
-      ACCOUNT: True
-      TOPIC: "my_topic"
-      STOP: "stop_flag"
-      MEASUREMENT: "my_measurement"
-      CERTIFICATES: "/path/to/certificates/"  # Optional, if encryption is used
-      ENCRYPTION: True        # Set to True if TLS/SSL is used, False otherwise
+      Broker: "mqtt_broker_address"
+      Port: "8885"
+      Account: True
+      Topic: "my_topic"
+      Stop: "stop_flag"
+      Measurement: "my_measurement"
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
 For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
 
@@ -321,16 +321,16 @@ This task retrieves data from Prometheus using specified queries and sends the p
 
 **Configuration Parameters**:
 - `ExecutionId` (required): Unique identifier for the execution.
-- `URL` (required): URL of the Prometheus server.
-- `PORT` (required): Port number for Prometheus server connection.
-- `QUERIES_RANGE` (optional): List of range queries to execute.
-- `QUERIES_CUSTOM` (optional): List of custom (instant) queries to execute.
-- `MEASUREMENT` (required): InfluxDB measurement name where data will be sent.
-- `STOP` (required): Signal to stop data retrieval.
-- `STEP` (required): Step interval for range queries.
-- `ACCOUNT` (required): Flag indicating when user and password is used (`True` or `False`).
-- `CERTIFICATES` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
-- `ENCRYPTION` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+- `Url` (required): URL of the Prometheus server.
+- `Port` (required): Port number for Prometheus server connection.
+- `QueriesRange` (optional): List of range queries to execute.
+- `QueriesCustom` (optional): List of custom (instant) queries to execute.
+- `Measurement` (required): InfluxDB measurement name where data will be sent.
+- `Stop` (required): Signal to stop data retrieval.
+- `Step` (required): Step interval for range queries.
+- `Account` (required): Flag indicating when user and password is used (`True` or `False`).
+- `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
 
 **Encryption**:
 
@@ -350,20 +350,20 @@ Sequence:
     Task: Run.PrometheusToInflux
     Config:
       ExecutionId: "@{ExecutionId}"
-      URL: "prometheus.example.com"
-      PORT: "9090"
-      QUERIES_RANGE:
+      Url: "prometheus.example.com"
+      Port: "9090"
+      QueriesRange:
         - "query_range_1"
         - "query_range_2"
-      QUERIES_CUSTOM:
+      QuieriesCustom:
         - "custom_query_1"
         - "custom_query_2"
-      MEASUREMENT: "my_measurement"
-      STOP: "stop_flag"
-      STEP: "1s"
-      ACCOUNT: True
-      CERTIFICATES: "/path/to/certificates/"  # Optional, if encryption is used
-      ENCRYPTION: True        # Set to True if TLS/SSL is used, False otherwise
+      Measurement: "my_measurement"
+      Stop: "stop_flag"
+      Step: "1s"
+      Account: True
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
 
 For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
@@ -380,10 +380,10 @@ This task listens for incoming TCP connections from Telegraf, processes the rece
 3. **Stopping Condition**: The task stops based on a specified stop signal.
 
 **Configuration Parameters**:
-- `MEASUREMENT` (required): The name of the InfluxDB measurement where the data will be stored.
-- `STOP` (required): Signal to stop the task.
-- `ENCRYPTION` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
-- `CERTIFICATES` (optional): Path to SSL certificate files, needed if encryption is enabled.
+- `Measurement` (required): The name of the InfluxDB measurement where the data will be stored.
+- `Stop` (required): Signal to stop the task.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+- `Certificates` (optional): Path to SSL certificate files, needed if encryption is enabled.
 
 **Encryption**:
 
@@ -401,10 +401,10 @@ Sequence:
   - Order: 1
     Task: Run.TelegrafToInflux
     Config:
-      MEASUREMENT: "my_measurement"
-      STOP: "stop_flag"
-      ENCRYPTION: True       # Set to True if TLS/SSL is used, False otherwise
-      CERTIFICATES: "/path/to/certificates/"  # Optional, if encryption is used
+      Measurement: "my_measurement"
+      Stop: "stop_flag"
+      Encryption: True       # Set to True if TLS/SSL is used, False otherwise
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
 ```
 For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
 
@@ -421,9 +421,7 @@ This task sends an email notification about the completion of an experiment or t
 
 **Configuration Parameters**:
 - `ExecutionId` (required): Unique identifier for the execution.
-- `EMAIL` (required): Recipient email address.
-- `SERVER` (required): SMTP server address.
-- `PORT` (required): Port number for the SMTP server.
+- `Email` (required): Recipient email address.
 
 **SMTP Configuration**:
 
@@ -442,9 +440,7 @@ Sequence:
     Task: Run.EmailNotification
     Config:
       ExecutionId: "@{ExecutionId}"
-      EMAIL: "recipient@example.com"
-      SERVER: "smtp.example.com"
-      PORT: "587"
+      Email: "recipient@example.com"
 ```
 ## Run.StopTask
 
@@ -458,7 +454,7 @@ This task sends a stop signal by putting a specific message into a control queue
 
 **Configuration Parameters**:
 - `ExecutionId` (required): Unique identifier for the execution.
-- `NAME` (required): Name of the task or process to be stopped.
+- `Name` (required): Name of the task or process to be stopped.
 
 **YAML Configuration Example**:
 
@@ -469,5 +465,5 @@ Sequence:
     Task: Run.StopTask
     Config:
       ExecutionId: "@{ExecutionId}"
-      NAME: "task_name"
+      Name: "task_name"
 ```
