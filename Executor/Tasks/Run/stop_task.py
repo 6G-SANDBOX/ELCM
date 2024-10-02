@@ -9,11 +9,11 @@ class StopTask(Task):
         self.paramRules = {
             
             'ExecutionId': (None, True),
-            'NAME': (None, True)
+            'Name': (None, True)
         }
     
 
     def Run(self):
 
-        new_task=self.params['NAME']+"_"+str(self.params['ExecutionId'])
+        new_task=self.params['Name']+"_"+str(self.params['ExecutionId'])
         utils.task_list.append(new_task)
