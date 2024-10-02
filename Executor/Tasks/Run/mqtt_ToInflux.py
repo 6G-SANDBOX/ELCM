@@ -3,7 +3,7 @@ import json
 from Helper import utils, Level
 from Settings import MQTTConfig
 from .to_influx import ToInfluxBase
-
+import time
 class MqttToInflux(ToInfluxBase):
 
     def __init__(self, logMethod, parent, params):
@@ -105,7 +105,7 @@ class MqttToInflux(ToInfluxBase):
         
         # Main loop to check for a stop signal from the control queue
         while stop not in utils.task_list:
-            pass
+            time.sleep(1)
         utils.task_list.remove(stop)
         # Stop the MQTT client's network loop and disconnect
         client.loop_stop()
