@@ -110,3 +110,8 @@ Resources/
 Scenarios/
 Temp/
 Results/
+Certificates/
+MQTT.yml
+PROMETHEUS.yml
+KAFKA.yml
+email.yml

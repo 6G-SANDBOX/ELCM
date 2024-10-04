@@ -5,7 +5,7 @@ from flask import render_template, make_response, request, flash, redirect, url_
 from functools import wraps, update_wrapper
 from datetime import datetime
 from Helper import Log, Serialize, LogInfo
-from Settings import Config, EvolvedConfig
+from Settings import Config, EvolvedConfig, KAFKAConfig, MQTTConfig, PROMETHEUSConfig, EmailConfig
 from Facility import Facility
 from typing import List, Dict
 from flask_paginate import Pagination, get_page_parameter
@@ -29,13 +29,27 @@ def nocache(view):
 def index():
     config = Config()
     evolved = EvolvedConfig()
+    kafka = KAFKAConfig()
+    mqtt=MQTTConfig()
+    prometheus=PROMETHEUSConfig()
+    email=EmailConfig()
     configLog = LogInfo.FromTuple(config.Validation)
     evolvedLog = LogInfo.FromTuple(evolved.Validation)
+    KAFKALog = LogInfo.FromTuple(kafka.Validation)
+    MQTTLog = LogInfo.FromTuple(mqtt.Validation)
+    PROMETHEUSLog = LogInfo.FromTuple(prometheus.Validation)
+    emailLog = LogInfo.FromTuple(email.Validation)
     facilityLog = LogInfo.FromTuple(Facility.Validation)
     resources = Facility.Resources()
     return render_template('index.html', executionId=Status.PeekNextId(),
                            executions=ExecutionQueue.Retrieve(), resources=resources,
-                           configLog=configLog, evolvedLog=evolvedLog, facilityLog=facilityLog)
+                           configLog=configLog, 
+                           evolvedLog=evolvedLog, 
+                           facilityLog=facilityLog, 
+                           KAFKALog=KAFKALog, 
+                           MQTTLog=MQTTLog,
+                           PROMETHEUSLog=PROMETHEUSLog,
+                           emailLog=emailLog)
 
 
 @app.route("/log")
@@ -66,7 +80,11 @@ def history():
 def reloadConfig():
     try:
         configurations = [('Configuration', Config(forceReload=True)),
-                          ('Evolved5g Configuration', EvolvedConfig(forceReload=True))]
+                          ('Evolved5g Configuration', EvolvedConfig(forceReload=True)),
+                          ('KAFKA Configuration', KAFKAConfig(forceReload=True)),
+                          ('MQTT Configuration', MQTTConfig(forceReload=True)),
+                          ('PROMETHEUS Configuration', PROMETHEUSConfig(forceReload=True)),
+                          ('EMAIL Configuration', EmailConfig(forceReload=True))]
 
         for name, config in configurations:
             Log.I(f"{name} reloaded:")

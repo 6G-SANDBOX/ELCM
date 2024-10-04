@@ -202,6 +202,272 @@ on the value of a published variable. Configuration values:
 - `VerdictOnMatch`: Verdict to set if the value matches the regular expression. Defaults to `NotSet`.
 - `VerdictOnNoMatch`: Verdict to set if the value does not match the regular expression. Defaults to `NotSet`.
 
+
+## Run.KafkaConsummerToInflux
+
+**Description**:
+
+This task consumes messages from a Kafka topic and sends them to InfluxDB.
+
+**How It Works**:
+1. **Initialization**: Configures Kafka consumer settings based on the provided parameters and sets up the connection to InfluxDB.
+2. **Message Handling**: Continuously listens to messages from a Kafka topic, processes them, and sends the data to InfluxDB.
+3. **Stopping Condition**: The task stops consuming messages when a specific stop signal is detected.
+
+**Configuration Parameters**:
+- `ExecutionId` (required): Unique identifier for the execution.
+- `Ip` (required): IP address of the Kafka broker.
+- `Port` (required): Port number for Kafka broker connection.
+- `Topic` (required): Kafka topic to consume messages from.
+- `Measurement` (required): InfluxDB measurement name where data will be sent.
+- `Stop` (required): Signal to stop message consumption.
+- `Account` (required): Flag indicating when user and password is used (`True` or `False`).
+- `GroupId` (optional): Kafka consumer group ID, used to manage offsets and group consumption.
+- `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+
+**Encryption**:
+
+This task uses encryption to secure the connection:
+
+- **TLS/SSL**: If enabled, the connection to Kafka is secured using TLS/SSL. The configuration includes:
+  - **Certificate File** (`client-cert-signed.pem`): Authenticates the client to the Kafka broker.
+  - **Private Key File** (`client-key.pem`): Establishes the client’s identity.
+  - **CA File** (`ca-cert.pem`): Verifies the Kafka broker’s certificate.
+
+**YAML Configuration Example**:
+
+```yaml
+Name: KAFKA
+Sequence:
+  - Order: 1
+    Task: Run.KafkaConsummerToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      Ip: "X.X.X.X"
+      Port: "XXXX"
+      Topic: "my_topic"
+      Measurement: "my_measurement"
+      Stop: "stop_flag"
+      Account: True       
+      GroupId: "my_group"     # Optional
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Encryption: True        # Set to True if TLS/SSL is used, False otherwise
+
+```
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
+## Run.MqttToInflux
+
+**Description**:
+
+This task subscribes to an MQTT topic, processes received messages, and sends them to InfluxDB.
+
+**How It Works**:
+1. **Initialization**: Configures the MQTT client settings based on the provided parameters and sets up the connection to InfluxDB.
+2. **Message Handling**: Subscribes to the MQTT topic, processes incoming messages, and sends the data to InfluxDB.
+3. **Stopping Condition**: The task stops processing messages when a specific stop signal is detected.
+
+**Configuration Parameters**:
+- `ExecutionId` (required): Unique identifier for the execution.
+- `Broker` (required): Address of the MQTT broker.
+- `Port` (required): Port number for MQTT broker connection.
+- `Account` (required): Flag indicating when user and password is used (`True` or `False`).
+- `Topic` (required): MQTT topic to subscribe to.
+- `Stop` (required): Signal to stop message processing.
+- `Measurement` (required): InfluxDB measurement name where data will be sent.
+- `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+
+**Encryption**:
+
+This task uses encryption to secure the MQTT connection:
+
+- **TLS/SSL**: If enabled, the connection to the MQTT broker is secured using TLS/SSL. The configuration includes:
+  - **Certificate File** (`client-cert.pem`): Authenticates the client to the MQTT broker.
+  - **Private Key File** (`client-key.pem`): Establishes the client’s identity.
+  - **CA File** (`ca.pem`): Verifies the MQTT broker’s certificate.
+
+**YAML Configuration Example**:
+
+```yaml
+Name: MQTT
+Sequence:
+  - Order: 1
+    Task: Run.MqttToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      Broker: "mqtt_broker_address"
+      Port: "8885"
+      Account: True
+      Topic: "my_topic"
+      Stop: "stop_flag"
+      Measurement: "my_measurement"
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Encryption: True        # Set to True if TLS/SSL is used, False otherwise
+```
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
+
+## Run.PrometheusToInflux
+
+**Description**:
+
+This task retrieves data from Prometheus using specified queries and sends the processed data to InfluxDB.
+
+**How It Works**:
+1. **Initialization**: Configures the Prometheus session based on the provided parameters and sets up the connection to InfluxDB.
+2. **Data Retrieval**: Executes range and custom queries to retrieve data from Prometheus.
+3. **Data Processing**: Processes and stores the retrieved data.
+4. **Data Transfer**: Sends the processed data to InfluxDB.
+5. **Stopping Condition**: The task stops processing when a specific stop signal is detected.
+
+**Configuration Parameters**:
+- `ExecutionId` (required): Unique identifier for the execution.
+- `Url` (required): URL of the Prometheus server.
+- `Port` (required): Port number for Prometheus server connection.
+- `QueriesRange` (optional): List of range queries to execute.
+- `QueriesCustom` (optional): List of custom (instant) queries to execute.
+- `Measurement` (required): InfluxDB measurement name where data will be sent.
+- `Stop` (required): Signal to stop data retrieval.
+- `Step` (required): Step interval for range queries.
+- `Account` (required): Flag indicating when user and password is used (`True` or `False`).
+- `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+
+**Encryption**:
+
+This task uses encryption to secure the connection:
+
+- **TLS/SSL**: If enabled, the connection to Prometheus is secured using TLS/SSL. The configuration includes:
+  - **Certificate File** (`client-cert.pem`): Authenticates the client to Prometheus.
+  - **Private Key File** (`client-key.pem`): Establishes the client’s identity.
+  - **CA File** (`ca.pem`): Verifies the Prometheus server’s certificate.
+
+**YAML Configuration Example**:
+
+```yaml
+Name: PROMETHEUS
+Sequence:
+  - Order: 1
+    Task: Run.PrometheusToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      Url: "prometheus.example.com"
+      Port: "9090"
+      QueriesRange:
+        - "query_range_1"
+        - "query_range_2"
+      QuieriesCustom:
+        - "custom_query_1"
+        - "custom_query_2"
+      Measurement: "my_measurement"
+      Stop: "stop_flag"
+      Step: "1s"
+      Account: True
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Encryption: True        # Set to True if TLS/SSL is used, False otherwise
+```
+
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
+
+## Run.TelegrafToInflux
+
+**Description**:
+
+This task listens for incoming TCP connections from Telegraf, processes the received data, and sends it to InfluxDB.
+
+**How It Works**:
+1. **Initialization**: Configures the TCP server and sets up SSL/TLS if required.
+2. **Data Handling**: Receives and decodes data from Telegraf, processes it, and sends it to InfluxDB.
+3. **Stopping Condition**: The task stops based on a specified stop signal.
+
+**Configuration Parameters**:
+- `Measurement` (required): The name of the InfluxDB measurement where the data will be stored.
+- `Stop` (required): Signal to stop the task.
+- `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+- `Certificates` (optional): Path to SSL certificate files, needed if encryption is enabled.
+
+**Encryption**:
+
+If SSL/TLS encryption is enabled:
+- **TLS/SSL**: The connection uses SSL/TLS. The SSL/TLS configuration includes:
+  - **Certificate File** (`server-cert.pem`): Authenticates the server to clients.
+  - **Private Key File** (`server-key.pem`): Establishes the server’s identity.
+  - **CA File** (`ca.pem`): Verifies the client’s certificate.
+
+**YAML Configuration Example**:
+
+```yaml
+Name: TELEGRAF
+Sequence:
+  - Order: 1
+    Task: Run.TelegrafToInflux
+    Config:
+      Measurement: "my_measurement"
+      Stop: "stop_flag"
+      Encryption: True       # Set to True if TLS/SSL is used, False otherwise
+      Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+```
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
+
+## Run.EmailNotification
+
+**Description**:
+
+This task sends an email notification about the completion of an experiment or task.
+
+**How It Works**:
+1. **Initialization**: Configures the email settings based on the provided parameters.
+2. **Email Composition**: Creates an email message with a subject and body indicating the completion of the task.
+3. **Email Sending**: Connects to the SMTP server and sends the email.
+
+**Configuration Parameters**:
+- `ExecutionId` (required): Unique identifier for the execution.
+- `Email` (required): Recipient email address.
+
+**SMTP Configuration**:
+
+The task uses SMTP for sending the email:
+
+- **Server Address**: The address of the SMTP server to connect to.
+- **Port**: The port number for the SMTP server (usually 587 for TLS).
+- **Authentication**: Uses username and password for SMTP authentication.
+
+**YAML Configuration Example**:
+
+```yaml
+Name: EMAIL
+Sequence:
+  - Order: 1
+    Task: Run.EmailNotification
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      Email: "recipient@example.com"
+```
+## Run.StopTask
+
+**Description**:
+
+This task sends a stop signal by putting a specific message into a control queue.
+
+**How It Works**:
+1. **Initialization**: Configures the task with the necessary parameters.
+2. **Stop Signal**: Constructs a stop signal message by combining the task name with the execution ID and places it in the control queue.
+
+**Configuration Parameters**:
+- `ExecutionId` (required): Unique identifier for the execution.
+- `Name` (required): Name of the task or process to be stopped.
+
+**YAML Configuration Example**:
+
+```yaml
+Name: STOP_TASK
+Sequence:
+  - Order: 1
+    Task: Run.StopTask
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      Name: "task_name"
+```
 ## Run.HelmDeploy
 Deploy the Helm Chart indicated by parameters in the cluster selected by the kubeconfig file where the ELCM resides. Configuration values:
 - `Action`: Action to be performed by the ELCM, one between "Deploy", "Delete" and "Rollback"

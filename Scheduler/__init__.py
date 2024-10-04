@@ -3,7 +3,7 @@ from Helper import Log
 from Status import Status
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
-from Settings import Config, EvolvedConfig
+from Settings import Config, EvolvedConfig, KAFKAConfig, MQTTConfig, PROMETHEUSConfig, EmailConfig
 from Facility import Facility
 from .heartbeat import HeartBeat
 from dotenv import load_dotenv
@@ -23,6 +23,18 @@ _showValidation("Config", config.Validation)
 
 evolvedConfig = EvolvedConfig()
 _showValidation("Evolved5g Config", evolvedConfig.Validation)
+
+kafkaConfig = KAFKAConfig()
+_showValidation("KAFKA Config", kafkaConfig.Validation)
+
+mqttConfig = MQTTConfig()
+_showValidation("MQTT Config", mqttConfig.Validation)
+
+prometheusConfig = PROMETHEUSConfig()
+_showValidation("PROMETHEUS Config", prometheusConfig.Validation)
+
+prometheusConfig = EmailConfig()
+_showValidation("EMAIL Config", EmailConfig.Validation)
 
 Facility.Reload()
 _showValidation("Facility", Facility.Validation)
