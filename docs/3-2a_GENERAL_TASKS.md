@@ -254,7 +254,7 @@ Sequence:
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 
 ```
-For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 ## Run.MqttToInflux
 
 **Description**:
@@ -304,7 +304,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
-For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.PrometheusToInflux
 
@@ -366,7 +366,7 @@ Sequence:
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
 
-For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.TelegrafToInflux
 
@@ -406,7 +406,7 @@ Sequence:
       Encryption: True       # Set to True if TLS/SSL is used, False otherwise
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
 ```
-For server configuration, consult: [Misc configurations](/docs/A3_VARIOUS_CONFIGURATIONS.md)
+For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.EmailNotification
 
