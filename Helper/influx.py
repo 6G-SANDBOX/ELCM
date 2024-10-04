@@ -1,5 +1,6 @@
 from influxdb import InfluxDBClient as InfluxDBClient_v1
 from influxdb_client import InfluxDBClient as InfluxDBClient_v2
+from influxdb_client import Point, WritePrecision
 from Settings import Config
 from typing import Dict, List, Union
 from datetime import datetime, timezone
@@ -22,17 +23,25 @@ class InfluxPayload:
         self.Measurement = re.sub(r'\W+', '_', measurement)  # Replace spaces and non-alphanumeric characters with _
         self.Tags: Dict[str, str] = {}
         self.Points: List[InfluxPoint] = []
+        self.Version = 'v2'
 
     @property
     def Serialized(self):
         data = []
-        for point in self.Points:
-            data.append(
-                {'measurement': self.Measurement,
-                 'tags': self.Tags,
-                 'time': point.Time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                 'fields': point.Fields}
-            )
+        if self.Version == 'v1':
+            for point in self.Points:
+                data.append(
+                    {'measurement': self.Measurement,
+                     'tags': self.Tags,
+                     'time': point.Time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                     'fields': point.Fields}
+                )
+        elif self.Version == 'v2':
+            tags
+            for point in self.Points:
+                p =
+                data.append(Point)
+
         return data
 
     def __str__(self):
@@ -79,7 +88,7 @@ class InfluxDb:
                                                influx.User, influx.Password, influx.Database)
             elif cls.version == "v2":
                 cls.client = InfluxDBClient_v2(url='http://127.0.0.1:8086',
-                                               token="pAwR_VmaV5wxxfcWrVOG5qQEchSgtQwSSTSREAbe43XNSLEzguuoSq1v54z08axQla4EwHBnfIU2j-4dAayjyQ==",
+                                               token="vc1kglEdjo9-0Zd09bVIBbjq47ci13EyJ6xxnKmC-MGLbW9EFLxUvF9PTg0_bs7_gnUvH1Ld0L5eQVe0JlkkGg==",
                                                org='UMA')
 
         except Exception as e:
