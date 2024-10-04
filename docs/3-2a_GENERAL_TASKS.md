@@ -202,6 +202,7 @@ on the value of a published variable. Configuration values:
 - `VerdictOnMatch`: Verdict to set if the value matches the regular expression. Defaults to `NotSet`.
 - `VerdictOnNoMatch`: Verdict to set if the value does not match the regular expression. Defaults to `NotSet`.
 
+
 ## Run.KafkaConsummerToInflux
 
 **Description**:
@@ -467,3 +468,9 @@ Sequence:
       ExecutionId: "@{ExecutionId}"
       Name: "task_name"
 ```
+## Run.HelmDeploy
+Deploy the Helm Chart indicated by parameters in the cluster selected by the kubeconfig file where the ELCM resides. Configuration values:
+- `Action`: Action to be performed by the ELCM, one between "Deploy", "Delete" and "Rollback"
+- `Namespace`: Name of the namespace where it will be deployed, if omitted, default is applied
+- `ReleaseName`: Chart release name
+- `HelmChartPath`: Path of the HelmChart to be deployed
