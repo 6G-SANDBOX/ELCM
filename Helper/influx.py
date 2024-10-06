@@ -1,12 +1,22 @@
 from influxdb import InfluxDBClient as InfluxDBClient_v1
 from influxdb_client import InfluxDBClient as InfluxDBClient_v2
-from influxdb_client import Point, WritePrecision
+from influxdb_client import Point
+from requests import RequestException
+
 from Settings import Config
 from typing import Dict, List, Union
 from datetime import datetime, timezone
 from csv import DictWriter, DictReader, Dialect, QUOTE_NONE
 from os.path import abspath
 import re
+import requests
+import enum
+
+
+class Versions(enum.Enum):
+    V1 = "v1"
+    V2 = "v2"
+    UNKNOWN = "Unknown version"
 
 
 class InfluxPoint:
@@ -23,12 +33,13 @@ class InfluxPayload:
         self.Measurement = re.sub(r'\W+', '_', measurement)  # Replace spaces and non-alphanumeric characters with _
         self.Tags: Dict[str, str] = {}
         self.Points: List[InfluxPoint] = []
-        self.Version = 'v2'
+        self.Version = None
 
     @property
     def Serialized(self):
         data = []
-        if self.Version == 'v1':
+
+        if self.Version == Versions.V1:
             for point in self.Points:
                 data.append(
                     {'measurement': self.Measurement,
@@ -36,7 +47,7 @@ class InfluxPayload:
                      'time': point.Time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                      'fields': point.Fields}
                 )
-        elif self.Version == 'v2':
+        elif self.Version == Versions.V2:
             for point in self.Points:
                 p = Point(self.Measurement)
                 for k, v in self.Tags.items():
@@ -80,20 +91,37 @@ class InfluxDb:
     baseTags = {}
     version = None
 
+    @staticmethod
+    def detectInfluxDBVersion(url):
+        try:
+            response = requests.get(f"{url}/ping")
+            header = response.headers.get('X-Influxdb-Version', 'Unknown version')
+            if header.startswith(Versions.V2.value):
+                return Versions.V2
+            elif header.startswith(Versions.V1.value):
+                return Versions.V1
+            else:
+                return Versions.UNKNOWN
+        except requests.exceptions.RequestException as e:
+            raise RequestException("Can't connect to InfluxDB server")
+
     @classmethod
     def initialize(cls):
-        cls.version = "v2"
         config = Config()
         influx = config.InfluxDb
+        influxdb_url = f"http://{config.InfluxDb.host}:{config.InfluxDb.port}"
+        cls.version = cls.detectInfluxDBVersion(influxdb_url)
+
         try:
-            if cls.version == "v1":
+            if cls.version == Versions.V1:
                 cls.client = InfluxDBClient_v1(influx.Host, influx.Port,
                                                influx.User, influx.Password, influx.Database)
-            elif cls.version == "v2":
-                cls.client = InfluxDBClient_v2(url='http://10.172.31.180:8086',
-                                               token="p1qv-tzrwW8XMemKxOyAvvjwl8CRggfl68SpArvE4AyuGpcTaYbA72zrg_5Ldh5wYaCaXnV6FWuvtosP_CDUXA==",
+            elif cls.version == Versions.V2:
+                cls.client = InfluxDBClient_v2(url=influxdb_url,
+                                               token="SbPtJ6LMzeOHApZJgdu0IdGAne9ycB6Ut7iV1DvYmM_Gnt52UIAnVH_f9x5ZkNtuvfxAXgmqDbiScdVdvmqhWQ==",
                                                org='UMA')
-
+            elif cls.version == Versions.UNKNOWN:
+                raise Exception("Unknown influxDB version")
         except Exception as e:
             raise Exception(f"Exception while creating Influx client, please review configuration: {e}") from e
 
@@ -118,9 +146,11 @@ class InfluxDb:
             cls.initialize()
 
         payload.Tags.update(cls.baseTags)
-        if cls.version == 'v1':
+        payload.Version = cls.version
+
+        if cls.version == Versions.V1:
             cls.client.write_points(payload.Serialized)
-        elif cls.version == 'v2':
+        elif cls.version == Versions.V2:
             cls.client.write_api().write(bucket=cls.database, org='UMA', record=payload.Serialized)
 
     @classmethod
