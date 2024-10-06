@@ -37,11 +37,14 @@ class InfluxPayload:
                      'fields': point.Fields}
                 )
         elif self.Version == 'v2':
-            tags
             for point in self.Points:
-                p =
-                data.append(Point)
-
+                p = Point(self.Measurement)
+                for k, v in self.Tags.items():
+                    p.tag(k, v)
+                for k, v in point.Fields.items():
+                    p.field(k, v)
+                p.time(point.Time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+                data.append(p)
         return data
 
     def __str__(self):
@@ -87,8 +90,8 @@ class InfluxDb:
                 cls.client = InfluxDBClient_v1(influx.Host, influx.Port,
                                                influx.User, influx.Password, influx.Database)
             elif cls.version == "v2":
-                cls.client = InfluxDBClient_v2(url='http://127.0.0.1:8086',
-                                               token="vc1kglEdjo9-0Zd09bVIBbjq47ci13EyJ6xxnKmC-MGLbW9EFLxUvF9PTg0_bs7_gnUvH1Ld0L5eQVe0JlkkGg==",
+                cls.client = InfluxDBClient_v2(url='http://10.172.31.180:8086',
+                                               token="p1qv-tzrwW8XMemKxOyAvvjwl8CRggfl68SpArvE4AyuGpcTaYbA72zrg_5Ldh5wYaCaXnV6FWuvtosP_CDUXA==",
                                                org='UMA')
 
         except Exception as e:
