@@ -109,7 +109,7 @@ class InfluxDb:
     def initialize(cls):
         config = Config()
         influx = config.InfluxDb
-        influxdb_url = f"http://{config.InfluxDb.host}:{config.InfluxDb.port}"
+        influxdb_url = f"http://{influx.Host}:{influx.Port}"
         cls.version = cls.detectInfluxDBVersion(influxdb_url)
 
         try:
@@ -118,8 +118,8 @@ class InfluxDb:
                                                influx.User, influx.Password, influx.Database)
             elif cls.version == Versions.V2:
                 cls.client = InfluxDBClient_v2(url=influxdb_url,
-                                               token="SbPtJ6LMzeOHApZJgdu0IdGAne9ycB6Ut7iV1DvYmM_Gnt52UIAnVH_f9x5ZkNtuvfxAXgmqDbiScdVdvmqhWQ==",
-                                               org='UMA')
+                                               token=influx.Token,
+                                               org=influx.Org)
             elif cls.version == Versions.UNKNOWN:
                 raise Exception("Unknown influxDB version")
         except Exception as e:
@@ -151,7 +151,7 @@ class InfluxDb:
         if cls.version == Versions.V1:
             cls.client.write_points(payload.Serialized)
         elif cls.version == Versions.V2:
-            cls.client.write_api().write(bucket=cls.database, org='UMA', record=payload.Serialized)
+            cls.client.write_api().write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
 
     @classmethod
     def PayloadToCsv(cls, payload: InfluxPayload, outputFile: str):
@@ -230,7 +230,15 @@ class InfluxDb:
         if cls.client is None:
             cls.initialize()
 
-        reply = cls.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
+        reply = None
+        if cls.version == Versions.V1:
+            reply = cls.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
+        elif cls.version == Versions.V2:
+            reply = cls.client.query_api.query(f"""
+      from(bucket: "{cls.database}")
+      |> range(start: 0)
+      |> filter(fn: (r) => r["ExecutionId"] == "47")
+      """)
         return [e['name'] for e in reply['measurements']]
 
     @classmethod
