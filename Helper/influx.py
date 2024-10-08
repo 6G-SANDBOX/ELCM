@@ -230,16 +230,21 @@ class InfluxDb:
         if cls.client is None:
             cls.initialize()
 
-        reply = None
         if cls.version == Versions.V1:
             reply = cls.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
+            return [e['name'] for e in reply['measurements']]
+
         elif cls.version == Versions.V2:
-            reply = cls.client.query_api.query(f"""
-      from(bucket: "{cls.database}")
-      |> range(start: 0)
-      |> filter(fn: (r) => r["ExecutionId"] == "47")
-      """)
-        return [e['name'] for e in reply['measurements']]
+            reply = cls.client.query_api.query(f'''
+            from(bucket: "{cls.database}")
+            |> range(start: 0)
+            |> filter(fn: (r) => r["ExecutionId"] == "{executionId}")
+            |> keep(columns: ["_measurement"])
+            |> group()
+            |> distinct(column: "_measurement")
+            ''', org=Config().InfluxDb.Org)
+
+            return [record.get_value() for table in reply for record in table.records]
 
     @classmethod
     def GetMeasurement(cls, executionId: int, measurement: str) -> List[InfluxPayload]:
@@ -255,36 +260,61 @@ class InfluxDb:
 
         if cls.client is None:
             cls.initialize()
-
-        # Retrieve the list of tags from the server, to separate from fields
-        reply = cls.client.query(f'show tag keys on "{cls.database}" from "{measurement}"')
-        tags = sorted([t['tagKey'] for t in reply.get_points()])
-
         pointsPerTagSet = {}
 
-        # Retrieve all points, separated depending on the tags
-        reply = cls.client.query(f'SELECT * FROM "{measurement}" WHERE ExecutionId =~ /^{executionId}$/')
-        for point in reply.get_points():
-            tagSet = _getTagSet(point, tags)
-            if tagSet not in pointsPerTagSet.keys():
-                pointsPerTagSet[tagSet] = []
-            pointsPerTagSet[tagSet].append(point)
+        if cls.version == Versions.V1:
+            # Retrieve the list of tags from the server, to separate from fields
+            reply = cls.client.query(f'show tag keys on "{cls.database}" from "{measurement}"')
+            tags = sorted([t['tagKey'] for t in reply.get_points()])
 
-        res = []
+            # Retrieve all points, separated depending on the tags
+            reply = cls.client.query(f'SELECT * FROM "{measurement}" WHERE ExecutionId =~ /^{executionId}$/')
+            for point in reply.get_points():
+                tagSet = _getTagSet(point, tags)
+                if tagSet not in pointsPerTagSet.keys():
+                    pointsPerTagSet[tagSet] = []
+                pointsPerTagSet[tagSet].append(point)
 
-        # Process each set of points as a separate InfluxPayload
-        for points in pointsPerTagSet.values():
-            payload = InfluxPayload(f'Remote_{measurement}')
-            for tag in tags:
-                payload.Tags[tag] = points[0][tag]
 
-            for point in points:
-                timestamp = point.pop('time')
-                influxPoint = InfluxPoint(_getDateTime(timestamp))
-                for key in [f for f in point.keys() if f not in tags]:
-                    influxPoint.Fields[key] = point[key]
-                payload.Points.append(influxPoint)
+        elif cls.version == Versions.V2:
+            # Retrieve the list of tags from the server, to separate from fields
+            reply = cls.client.query_api.query(f'''
+            import "influxdata/influxdb/schema"
+            schema.tagKeys(
+            bucket: "dev",
+            start: 0
+            )
+            ''', org=Config().InfluxDb.Org)
+            tags = sorted([record.get_value() for table in reply for record in table.records])
 
-            res.append(payload)
+            # Retrieve all points, separated depending on the tags
+            reply = cls.client.query_api.query(f'''
+            from(bucket: "{cls.database}")
+            |> range(start: 0)
+            |> filter(fn: (r) => r._measurement == "{measurement}")
+            ''', org=Config().InfluxDb.Org)
+            for table in reply:
+                for point in table.records:
+                    tagSet = _getTagSet(point, tags)
+                    if tagSet not in pointsPerTagSet.keys():
+                        pointsPerTagSet[tagSet] = []
+                    pointsPerTagSet[tagSet].append(point)
 
-        return res
+            res = []
+
+            # Process each set of points as a separate InfluxPayload
+            for points in pointsPerTagSet.values():
+                payload = InfluxPayload(f'Remote_{measurement}')
+                for tag in tags:
+                    payload.Tags[tag] = points[0][tag]
+
+                for point in points:
+                    timestamp = point.pop('time')
+                    influxPoint = InfluxPoint(_getDateTime(timestamp))
+                    for key in [f for f in point.keys() if f not in tags]:
+                        influxPoint.Fields[key] = point[key]
+                    payload.Points.append(influxPoint)
+
+                res.append(payload)
+
+            return res

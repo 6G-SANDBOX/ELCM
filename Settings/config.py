@@ -163,9 +163,8 @@ class InfluxDb(enabledLoginRestApi):
     def Validation(self) -> List[Tuple['Level', str]]:
         if self.Token is not None:
             if self.Org is None:
-                return [(Level.ERROR, "For InfluxDB v2+ the Org field is mandatory")]
-        else:
-            return super().Validation
+                return [(Level.ERROR, "For InfluxDB v2+ the Org field is mandatory"), ()]
+        return super().Validation
 
 
 class Logging(validable):
