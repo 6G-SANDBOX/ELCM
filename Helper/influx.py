@@ -261,7 +261,7 @@ class InfluxDb:
         if cls.client is None:
             cls.initialize()
         pointsPerTagSet = {}
-
+        tags = []
         if cls.version == Versions.V1:
             # Retrieve the list of tags from the server, to separate from fields
             reply = cls.client.query(f'show tag keys on "{cls.database}" from "{measurement}"')
@@ -274,7 +274,6 @@ class InfluxDb:
                 if tagSet not in pointsPerTagSet.keys():
                     pointsPerTagSet[tagSet] = []
                 pointsPerTagSet[tagSet].append(point)
-
 
         elif cls.version == Versions.V2:
             # Retrieve the list of tags from the server, to separate from fields
@@ -300,21 +299,21 @@ class InfluxDb:
                         pointsPerTagSet[tagSet] = []
                     pointsPerTagSet[tagSet].append(point)
 
-            res = []
+        res = []
 
-            # Process each set of points as a separate InfluxPayload
-            for points in pointsPerTagSet.values():
-                payload = InfluxPayload(f'Remote_{measurement}')
-                for tag in tags:
-                    payload.Tags[tag] = points[0][tag]
+        # Process each set of points as a separate InfluxPayload
+        for points in pointsPerTagSet.values():
+            payload = InfluxPayload(f'Remote_{measurement}')
+            for tag in tags:
+                payload.Tags[tag] = points[0][tag]
 
-                for point in points:
-                    timestamp = point.pop('time')
-                    influxPoint = InfluxPoint(_getDateTime(timestamp))
-                    for key in [f for f in point.keys() if f not in tags]:
-                        influxPoint.Fields[key] = point[key]
-                    payload.Points.append(influxPoint)
+            for point in points:
+                timestamp = point.pop('time')
+                influxPoint = InfluxPoint(_getDateTime(timestamp))
+                for key in [f for f in point.keys() if f not in tags]:
+                    influxPoint.Fields[key] = point[key]
+                payload.Points.append(influxPoint)
 
-                res.append(payload)
+            res.append(payload)
 
-            return res
+        return res
