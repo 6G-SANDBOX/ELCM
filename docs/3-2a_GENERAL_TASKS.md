@@ -474,3 +474,38 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 - `Namespace`: Name of the namespace where it will be deployed, if omitted, default is applied
 - `ReleaseName`: Chart release name
 - `HelmChartPath`: Path of the HelmChart to be deployed
+
+## Run.CliSsh
+
+**Description**:
+
+This task establishes an SSH connection to a remote server, executes a specified command, and logs the output or any errors encountered during execution.
+
+**How It Works**:
+1. **Initialization**: Sets up the SSH client and defines the necessary parameters for the connection.
+2. **SSH Connection**: Connects to the SSH server using the provided hostname, port, username, and RSA private key.
+3. **Command Execution**: Executes the specified command on the remote server and captures both standard output and error output.
+4. **Logging**: Logs the command output and any error messages, handling authentication errors and SSH-related exceptions.
+5. **Cleanup**: Ensures that the SSH connection is closed after execution.
+
+**Configuration Parameters**:
+- `Hostname` (required): The hostname or IP address of the SSH server.
+- `Port` (optional): The SSH port (default is 22).
+- `Username` (required): The username for the SSH connection.
+- `Certificate` (required): Path to the RSA private key file used for authentication.
+- `Command` (required): The command to execute on the remote server.
+
+**YAML Configuration Example**
+```yaml
+Name: CLI_SSH
+Sequence:
+  - Order: 1
+    Task: Run.CliSsh
+    Config:
+      Hostname: "192.168.1.100"                # IP address or hostname of the SSH server
+      Port: 22                                  # SSH port (default is 22)
+      Username: "user"                          # Username for the SSH connection
+      Certificate: "/path/to/private_key"  # Path to the RSA private key for authentication
+      Command: "ifconfig"                         # Command to execute on the remote server
+      
+```
