@@ -1,6 +1,6 @@
 from Scheduler.east_west import bp
 from Scheduler.execution import handleExecutionResults, executionOrTombstone
-from flask import jsonify, request, json
+from flask import jsonify, request, json, redirect, url_for
 from Status import ExecutionQueue
 from Helper import InfluxDb
 from Settings import Config
@@ -9,6 +9,9 @@ from Settings import Config
 notFound = {'success': False, 'message': 'Execution ID is not valid or experiment is not running'}
 hiddenVariables = ['Configuration', 'Descriptor']
 
+@bp.route('/run', methods=['POST'])
+def start():
+    return redirect(url_for('dispatcherApi.start'))
 
 @bp.route('/<int:executionId>/peerDetails', methods=['POST'])
 def peer(executionId: int):

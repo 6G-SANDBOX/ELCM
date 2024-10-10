@@ -3,6 +3,7 @@ from Helper import Level
 from Settings import Config
 from time import sleep
 from Interfaces import RemoteApi
+from Data import ExperimentType
 
 
 class Coordinate(Task):
@@ -10,30 +11,30 @@ class Coordinate(Task):
         super().__init__("Coordinate", parent, None, logMethod, None)
 
     def Run(self):
-        remote = self.parent.Descriptor.Remote
-        if remote is not None:
+        descriptor = self.parent.Descriptor
+
+        if descriptor.Type == ExperimentType.Distributed:
             eastWest = Config().EastWest
             if eastWest.Enabled:
-                host, port = eastWest.GetRemote(remote)
-                if host is not None:
-                    remoteApi = RemoteApi(host, port)
-                    self.parent.RemoteApi = remoteApi
-                    self.Log(Level.INFO, 'Remote connection configured. Waiting for remote Execution ID...')
+                if descriptor.RemoteDescriptor is None:  # We are the remote side
+                    self.parent.RemoteId = descriptor.Extra.get('PeerId')
+                else:  # We are the main side
+                    remote = descriptor.Remote
+                    host, port = eastWest.GetRemote(remote)
+                    if host is not None:
+                        remoteApi = RemoteApi(host, port)
+                        self.parent.RemoteApi = remoteApi
 
-                    timeout = eastWest.Timeout or 120
-                    while self.parent.RemoteId is None:
-                        if timeout < 0: break
-                        self.Log(Level.DEBUG, f'Unavailable. Timeout in {timeout} seconds.')
-                        sleep(5)
-                        timeout -= 5
+                        self.Log(Level.INFO, f"Sending execution request to remote '{remote}'")
+                        self.parent.RemoteId = remoteApi.Run(descriptor.RemoteDescriptor)
 
-                    if self.parent.RemoteId is not None:
-                        self.Log(Level.INFO, 'Remote Execution ID received.')
+                        if self.parent.RemoteId is not None:
+                            self.Log(Level.INFO, 'Remote Execution ID received.')
+                        else:
+                            raise RuntimeError(f"Unable to retrieve Execution ID from remote '{remote}'")
                     else:
-                        raise RuntimeError("Timeout reached while waiting for remote Execution ID.")
-                else:
-                    raise RuntimeError(f"Unknown remote '{remote}'.")
+                        raise RuntimeError(f"Unknown remote '{remote}'.")
             else:
                 raise RuntimeError("Unable to run distributed experiment while East/West interface is disabled.")
         else:
-            self.Log(Level.INFO, 'Remote not set, skipping coordination.')
+            self.Log(Level.INFO, 'Not a distributed experiment, skipping coordination.')
