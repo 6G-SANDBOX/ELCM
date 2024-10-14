@@ -3,6 +3,7 @@ from Helper import Level
 from Settings import Config
 from time import sleep
 from Interfaces import RemoteApi
+from Data import ExperimentType
 
 
 class Farewell(Task):
@@ -10,8 +11,9 @@ class Farewell(Task):
         super().__init__("Farewell", parent, None, logMethod, None)
 
     def Run(self):
-        remote = self.parent.Descriptor.Remote
-        if remote is not None:
+
+        descriptor = self.parent.Descriptor
+        if descriptor.Type == ExperimentType.Distributed:
             eastWest = Config().EastWest
             if eastWest.Enabled:
                 from Experiment import ExperimentStatus
@@ -39,4 +41,4 @@ class Farewell(Task):
             else:
                 raise RuntimeError("Unable to run distributed experiment while East/West interface is disabled.")
         else:
-            self.Log(Level.INFO, 'Remote not set, skipping farewell.')
+            self.Log(Level.INFO, 'Not a distributed experiment, skipping farewell.')
