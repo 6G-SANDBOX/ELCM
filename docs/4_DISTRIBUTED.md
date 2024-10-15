@@ -1,14 +1,13 @@
 # Distributed experiments:
 
-When correctly configured, two 5Genesis platforms can perform the execution of a distributed experiment, in which
-both platforms execute tasks in a coordinated manner and exchange information with each other. In order to use this
-functionality, the following conditions must be met:
+When correctly configured, two ELCM instances (platforms) can perform the execution of a distributed experiment, in
+which both platforms execute tasks in a coordinated manner and exchange information with each other. In order to use
+this functionality, the following conditions must be met:
 
 - On each platform, a test case that defines the set of actions (including any necessary coordination) of that side
   exists.
 - The East/West interface of the ELCM in both sides is enabled, there is connectivity between the two instances and
   connection details for the remote side's ELCM are defined.
-- The remote platforms are registered in the Dispatcher of both sides (see the Dispatcher documentation).
 
 Optionally, in order to ease the creation of a valid experiment descriptor:
 
@@ -32,10 +31,10 @@ following differences:
 
 The general workflow during a distributed experiment is as follows:
 
-- The Dispatcher of one of the platforms (the `Main` platform) receives a distributed experiment execution request,
-  either from the Portal or through the Open APIs.
-- The Dispatcher performs the initial coordination, contacting with the ELCM of its own platform and the Dispatcher
-  of the remote platform (the `Secondary` platform).
+- The ELCM of one of the platforms (the `Main` platform) receives a distributed experiment execution request,
+  either from the Portal or directly through the API.
+- During the Coordination step, the `Main` ELCM contacts with the ELCM of the remote platform (the `Secondary` 
+  platform).
 - Once the initial coordination is completed, the ELCM on both sides communicate directly for the rest of the
   experiment execution.
 - Each side performs the execution of their tasks as normal, unless they reach a point where they must coordinate:
