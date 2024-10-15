@@ -115,6 +115,12 @@ class ExecutorBase(Child):
             return parent.RemoteId
         return None
 
+    @RemoteId.setter
+    def RemoteId(self, peerId):
+        parent = self.findParent()
+        if parent is not None:
+            parent.RemoteId = peerId
+
     def Serialize(self) -> Dict:
         data = {
             'ExecutionId': self.ExecutionId,

@@ -1,18 +1,21 @@
 from Scheduler.east_west import bp
 from Scheduler.execution import handleExecutionResults, executionOrTombstone
-from flask import jsonify, request, json
+from flask import jsonify, request, json, redirect, url_for
 from Status import ExecutionQueue
 from Helper import InfluxDb
 from Settings import Config
 
 
-notFound = {'success': False, 'message': 'Execution ID is not valid or experiment is not running'}
+notFound = {'success': False, 'message': 'Execution ID not found'}
 hiddenVariables = ['Configuration', 'Descriptor']
 
+@bp.route('/run', methods=['POST'])
+def start():
+    return redirect(url_for('dispatcherApi.start'))
 
 @bp.route('/<int:executionId>/peerDetails', methods=['POST'])
 def peer(executionId: int):
-    execution = ExecutionQueue.Find(executionId)
+    execution = executionOrTombstone(executionId)
     if execution is not None:
         data = request.json
         try:
@@ -28,13 +31,15 @@ def peer(executionId: int):
     else:
         return jsonify(notFound)
 
+# Note: Routes below can operate with finished exeperiments
 
 @bp.route('/<int:executionId>/status')
 def status(executionId: int):
-    execution = ExecutionQueue.Find(executionId)
+    execution = executionOrTombstone(executionId)
     if execution is not None:
-        return jsonify({'success': True, 'status': execution.CoarseStatus.name, 'milestones': execution.Milestones,
-                        'message': f'Status of execution {executionId} retrieved successfully'})
+        payload = {'success': True, 'status': execution.CoarseStatus.name, 'milestones': execution.Milestones,
+                   'message': f'Status of execution {executionId} retrieved successfully'}
+        return jsonify(payload)
     else:
         return jsonify(notFound)
 
@@ -61,8 +66,6 @@ def values(executionId: int, name: str = None):
     else:
         return jsonify(notFound)
 
-
-# Note: Routes below can operate with finished exeperiments
 
 @bp.route('/<int:executionId>/results')
 def results(executionId: int):
