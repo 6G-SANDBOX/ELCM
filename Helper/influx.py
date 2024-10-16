@@ -14,7 +14,7 @@ import enum
 
 
 class Versions(enum.Enum):
-    V1 = "v1"
+    V1 = "1"
     V2 = "v2"
     UNKNOWN = "Unknown version"
 
@@ -235,12 +235,11 @@ class InfluxDb:
             return [e['name'] for e in reply['measurements']]
 
         elif cls.version == Versions.V2:
-            reply = cls.client.query_api.query(f'''
+            reply = cls.client.query_api().query(f'''
             from(bucket: "{cls.database}")
             |> range(start: 0)
             |> filter(fn: (r) => r["ExecutionId"] == "{executionId}")
             |> keep(columns: ["_measurement"])
-            |> group()
             |> distinct(column: "_measurement")
             ''', org=Config().InfluxDb.Org)
 
@@ -252,7 +251,7 @@ class InfluxDb:
             values = [str(point[tag]) for tag in tags]
             return ','.join(values)
 
-        def _getDateTime(value: str):
+        def _getDateTime(value):
             try:
                 return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
             except ValueError:
@@ -277,17 +276,17 @@ class InfluxDb:
 
         elif cls.version == Versions.V2:
             # Retrieve the list of tags from the server, to separate from fields
-            reply = cls.client.query_api.query(f'''
+            reply = cls.client.query_api().query(f'''
             import "influxdata/influxdb/schema"
             schema.tagKeys(
-            bucket: "dev",
-            start: 0
-            )
+            bucket: "{cls.database}",
+            predicate: (r) => r["_measurement"] == "{measurement}",
+            start: 0)
             ''', org=Config().InfluxDb.Org)
             tags = sorted([record.get_value() for table in reply for record in table.records])
 
             # Retrieve all points, separated depending on the tags
-            reply = cls.client.query_api.query(f'''
+            reply = cls.client.query_api().query(f'''
             from(bucket: "{cls.database}")
             |> range(start: 0)
             |> filter(fn: (r) => r._measurement == "{measurement}")
@@ -308,8 +307,14 @@ class InfluxDb:
                 payload.Tags[tag] = points[0][tag]
 
             for point in points:
-                timestamp = point.pop('time')
-                influxPoint = InfluxPoint(_getDateTime(timestamp))
+                if cls.version == Versions.V2:
+                    point = {"measurement": point.get_measurement(), "field": point.get_field(),
+                             "value": point.get_value(), "time": point.get_time(), **point.values}
+                    timestamp = point.pop('time')
+                    influxPoint = InfluxPoint(timestamp)
+                elif cls.version == Versions.V1:
+                    timestamp = point.pop('time')
+                    influxPoint = InfluxPoint(_getDateTime(timestamp))
                 for key in [f for f in point.keys() if f not in tags]:
                     influxPoint.Fields[key] = point[key]
                 payload.Points.append(influxPoint)

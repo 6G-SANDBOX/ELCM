@@ -44,7 +44,7 @@ The ELCM instance can be configured by editing the `config.yml` file. The values
     * Port: Port where InfluxDB is listening
     * User: InfluxDb instance user (only for influxDB v1)
     * Password: InfluxDb user password (only for influxDB v1)
-    * Database: InfluxDb instance database
+    * Database: InfluxDb instance database or bucket
     * Token: InfluxDb instance token (only for influxDB v2)
     * Org: Organization to be used in the influxdb instance (only for influxDB v2)
 > These values will be used for sending results to an InfluxDb instance, for example when running the 
