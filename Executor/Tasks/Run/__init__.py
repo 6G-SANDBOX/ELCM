@@ -21,3 +21,4 @@ from .email_notification import EmailNotification
 from .mqtt_ToInflux import MqttToInflux
 from .telegraf_ToInflux import TelegrafToInflux
 from .helm_deploy import HelmDeploy
+from .cli_ssh import CliSsh

@@ -9,3 +9,4 @@ PyYAML~=6.0
 kafka-python~=2.0.2
 prometheus-api-client~=0.5.5
 paho-mqtt~=2.1.0
+paramiko~=3.5.0
