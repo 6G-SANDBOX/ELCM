@@ -22,8 +22,7 @@ class CliSsh(Task):
         # Attempt to parse the key as different types
         for KeyClass in [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]:
             try:
-                KeyClass.from_private_key_file(certificate_path)
-                return  # If no exception, key is valid
+                return KeyClass.from_private_key_file(certificate_path)
             except Exception:
                 continue  # Try the next key type
 
@@ -41,7 +40,7 @@ class CliSsh(Task):
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.validate_certificate(certificate_path)
+        key=self.validate_certificate(certificate_path)
 
         try:
             # Connect using the private key file
@@ -49,7 +48,7 @@ class CliSsh(Task):
                 hostname=hostname,
                 port=port,
                 username=username,
-                key_filename=certificate_path
+                pkey=key
             )
             # Execute the command
             stdin, stdout, stderr = client.exec_command(command)
