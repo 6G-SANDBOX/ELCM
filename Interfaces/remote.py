@@ -2,11 +2,17 @@ from REST import RestClient
 from typing import List, Tuple, Dict, Optional
 from Helper import Log
 from time import sleep
+from json import dumps
 
 
 class RemoteApi(RestClient):
     def __init__(self, host, port):
         super().__init__(host, port, '/distributed')
+
+    def Run(self, descriptor: Dict) -> [int | None]:
+        response = self.HttpPost(f'{self.api_url}/run',
+                                 {'Content-Type': 'application/json'}, dumps(descriptor))
+        return self.ResponseToJson(response).get('ExecutionId', None)
 
     def GetStatus(self, remoteId: int) -> Tuple[Optional['ExperimentStatus'], List[str]]:
         from Experiment import ExperimentStatus

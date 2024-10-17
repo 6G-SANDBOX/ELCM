@@ -474,3 +474,41 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 - `Namespace`: Name of the namespace where it will be deployed, if omitted, default is applied
 - `ReleaseName`: Chart release name
 - `HelmChartPath`: Path of the HelmChart to be deployed
+
+## Run.CliSsh
+
+**Description**:
+
+The `CliSsh` task establishes an SSH connection to a remote server, executes a specified command, and logs the output or any errors encountered during execution. It supports multiple types of private key authentication, including RSA, ECDSA, and Ed25519.
+
+**How It Works**:
+1. **Initialization**: 
+   - Defines a set of required and optional parameters needed to configure the SSH connection, such as hostname, port, username, private key path, and the command to execute.
+   
+2. **SSH Connection**: 
+   - The client connects to the specified SSH server using the provided hostname and port, and it accepts various private key types (RSA, ECDSA, Ed25519) for authentication.
+   
+3. **Command Execution**:
+   - Once connected, the provided command is executed on the remote server.
+   - Captures the standard output and error output streams from the executed command.
+
+**Configuration Parameters**:
+- `Hostname` (required): The hostname or IP address of the SSH server.
+- `Port` (optional): The SSH port (default is 22).
+- `Username` (required): The username for the SSH connection.
+- `Certificate` (required): Path to the private key file used for authentication (supports RSA, ECDSA, and Ed25519).
+- `Command` (required): The command to execute on the remote server.
+
+**YAML Configuration Example**
+```yaml
+Name: CLI_SSH
+Sequence:
+  - Order: 1
+    Task: Run.CliSsh
+    Config:
+      Hostname: "192.168.1.100"               # IP address or hostname of the SSH server
+      Port: 22                                # SSH port (default is 22)
+      Username: "user"                        # Username for the SSH connection
+      Certificate: "/path/to/private_key"     # Path to the private key for authentication
+      Command: "ifconfig"                     # Command to execute on the remote server
+```
