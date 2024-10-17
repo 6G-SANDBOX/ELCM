@@ -301,6 +301,7 @@ class InfluxDb:
         res = []
 
         # Process each set of points as a separate InfluxPayload
+        influxPoint = None
         for points in pointsPerTagSet.values():
             payload = InfluxPayload(f'Remote_{measurement}')
             for tag in tags:

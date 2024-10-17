@@ -139,12 +139,18 @@ class SliceManager(restApi):
 
 class InfluxDb(enabledLoginRestApi):
     def __init__(self, data: Dict):
-        defaults = {
-            'Database': (None, Level.ERROR),
-            'Token': (None, Level.WARNING),
-            'Org': (None, Level.WARNING)
-        }
-        super().__init__(data, 'InfluxDb', defaults)
+        if 'Token' in data.keys() and 'Org' in data.keys():
+            defaults = {
+                'Database': (None, Level.ERROR),
+                'Token': (None, Level.WARNING),
+                'Org': (None, Level.WARNING)
+            }
+            super().__init__(data, 'InfluxDb V2', defaults)
+        else:
+            defaults = {
+                'Database': (None, Level.ERROR),
+            }
+            super().__init__(data, 'InfluxDb V1', defaults)
 
     @property
     def Database(self):
@@ -160,9 +166,8 @@ class InfluxDb(enabledLoginRestApi):
 
     @property
     def Validation(self) -> List[Tuple['Level', str]]:
-        if self.Token is not None:
-            if self.Org is None:
-                return [(Level.ERROR, "For InfluxDB v2+ the Org field is mandatory"), ()]
+        if self.Token is not None and self.Org is None:
+            return [(Level.ERROR, "For InfluxDB v2+ the Org field is mandatory"), ()]
         return super().Validation
 
 
