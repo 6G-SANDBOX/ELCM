@@ -167,7 +167,7 @@ class InfluxDb(enabledLoginRestApi):
     @property
     def Validation(self) -> List[Tuple['Level', str]]:
         if self.Token is not None and self.Org is None:
-            return [(Level.ERROR, "For InfluxDB v2+ the Org field is mandatory"), ()]
+            return [(Level.ERROR, "For InfluxDB v2+ the Org field is mandatory")]
         return super().Validation
 
 
@@ -298,6 +298,6 @@ class Config(ConfigBase):
                       self.Grafana, self.InfluxDb, self.Metadata, self.EastWest, ]:
             Config.Validation.extend(entry.Validation)
             keys.discard(entry.section)
-
+        keys.discard(self.InfluxDb.section.split(' ')[0])  # Necessary since several versions of InfluxDb are supported.
         if len(keys) != 0:
             Config.Validation.append((Level.WARNING, f"Unrecognized keys found: {(', '.join(keys))}"))
