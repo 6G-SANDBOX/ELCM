@@ -1,10 +1,22 @@
-from influxdb import InfluxDBClient
+from influxdb import InfluxDBClient as InfluxDBClient_v1
+from influxdb_client import InfluxDBClient as InfluxDBClient_v2
+from influxdb_client import Point
+from requests import RequestException
+
 from Settings import Config
 from typing import Dict, List, Union
 from datetime import datetime, timezone
 from csv import DictWriter, DictReader, Dialect, QUOTE_NONE
 from os.path import abspath
 import re
+import requests
+import enum
+
+
+class Versions(enum.Enum):
+    V1 = "1"
+    V2 = "v2"
+    UNKNOWN = "Unknown version"
 
 
 class InfluxPoint:
@@ -21,17 +33,29 @@ class InfluxPayload:
         self.Measurement = re.sub(r'\W+', '_', measurement)  # Replace spaces and non-alphanumeric characters with _
         self.Tags: Dict[str, str] = {}
         self.Points: List[InfluxPoint] = []
+        self.Version = None
 
     @property
     def Serialized(self):
         data = []
-        for point in self.Points:
-            data.append(
-                {'measurement': self.Measurement,
-                 'tags': self.Tags,
-                 'time': point.Time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                 'fields': point.Fields}
-            )
+
+        if self.Version == Versions.V1:
+            for point in self.Points:
+                data.append(
+                    {'measurement': self.Measurement,
+                     'tags': self.Tags,
+                     'time': point.Time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                     'fields': point.Fields}
+                )
+        elif self.Version == Versions.V2:
+            for point in self.Points:
+                p = Point(self.Measurement)
+                for k, v in self.Tags.items():
+                    p.tag(k, v)
+                for k, v in point.Fields.items():
+                    p.field(k, v)
+                p.time(point.Time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+                data.append(p)
         return data
 
     def __str__(self):
@@ -65,15 +89,39 @@ class InfluxDb:
     client = None
     database = None
     baseTags = {}
+    version = None
+
+    @staticmethod
+    def detectInfluxDBVersion(url):
+        try:
+            response = requests.get(f"{url}/ping")
+            header = response.headers.get('X-Influxdb-Version', 'Unknown version')
+            if header.startswith(Versions.V2.value):
+                return Versions.V2
+            elif header.startswith(Versions.V1.value):
+                return Versions.V1
+            else:
+                return Versions.UNKNOWN
+        except requests.exceptions.RequestException as e:
+            raise RequestException("Can't connect to InfluxDB server")
 
     @classmethod
     def initialize(cls):
         config = Config()
-
         influx = config.InfluxDb
+        influxdb_url = f"http://{influx.Host}:{influx.Port}"
+        cls.version = cls.detectInfluxDBVersion(influxdb_url)
+
         try:
-            cls.client = InfluxDBClient(influx.Host, influx.Port,
-                                        influx.User, influx.Password, influx.Database)
+            if cls.version == Versions.V1:
+                cls.client = InfluxDBClient_v1(influx.Host, influx.Port,
+                                               influx.User, influx.Password, influx.Database)
+            elif cls.version == Versions.V2:
+                cls.client = InfluxDBClient_v2(url=influxdb_url,
+                                               token=influx.Token,
+                                               org=influx.Org)
+            elif cls.version == Versions.UNKNOWN:
+                raise Exception("Unknown influxDB version")
         except Exception as e:
             raise Exception(f"Exception while creating Influx client, please review configuration: {e}") from e
 
@@ -98,7 +146,12 @@ class InfluxDb:
             cls.initialize()
 
         payload.Tags.update(cls.baseTags)
-        cls.client.write_points(payload.Serialized)
+        payload.Version = cls.version
+
+        if cls.version == Versions.V1:
+            cls.client.write_points(payload.Serialized)
+        elif cls.version == Versions.V2:
+            cls.client.write_api().write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
 
     @classmethod
     def PayloadToCsv(cls, payload: InfluxPayload, outputFile: str):
@@ -122,11 +175,15 @@ class InfluxDb:
     def CsvToPayload(cls, measurement: str, csvFile: str, delimiter: str, timestampKey: str,
                      tryConvert: bool = True, keysToRemove: List[str] = None) -> InfluxPayload:
         def _convert(value: str) -> Union[int, float, bool, str]:
-            try: return int(value)
-            except ValueError: pass
+            try:
+                return int(value)
+            except ValueError:
+                pass
 
-            try: return float(value)
-            except ValueError: pass
+            try:
+                return float(value)
+            except ValueError:
+                pass
 
             return {'true': True, 'false': False}.get(value.lower(), value)
 
@@ -155,7 +212,7 @@ class InfluxDb:
                     timestamp = datetime.fromtimestamp(timestampValue, tz=timezone.utc)
                 except (OSError, ValueError):
                     # value outside of bounds, maybe because it's specified in milliseconds instead of seconds
-                    timestamp = datetime.fromtimestamp(timestampValue/1000.0, tz=timezone.utc)
+                    timestamp = datetime.fromtimestamp(timestampValue / 1000.0, tz=timezone.utc)
 
                 point = InfluxPoint(timestamp)
                 for key, value in row.items():
@@ -173,9 +230,20 @@ class InfluxDb:
         if cls.client is None:
             cls.initialize()
 
-        reply = cls.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
-        return [e['name'] for e in reply['measurements']]
+        if cls.version == Versions.V1:
+            reply = cls.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
+            return [e['name'] for e in reply['measurements']]
 
+        elif cls.version == Versions.V2:
+            reply = cls.client.query_api().query(f'''
+            from(bucket: "{cls.database}")
+            |> range(start: 0)
+            |> filter(fn: (r) => r["ExecutionId"] == "{executionId}")
+            |> keep(columns: ["_measurement"])
+            |> distinct(column: "_measurement")
+            ''', org=Config().InfluxDb.Org)
+
+            return [record.get_value() for table in reply for record in table.records]
 
     @classmethod
     def GetMeasurement(cls, executionId: int, measurement: str) -> List[InfluxPayload]:
@@ -183,7 +251,7 @@ class InfluxDb:
             values = [str(point[tag]) for tag in tags]
             return ','.join(values)
 
-        def _getDateTime(value: str):
+        def _getDateTime(value):
             try:
                 return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
             except ValueError:
@@ -191,32 +259,63 @@ class InfluxDb:
 
         if cls.client is None:
             cls.initialize()
-
-        # Retrieve the list of tags from the server, to separate from fields
-        reply = cls.client.query(f'show tag keys on "{cls.database}" from "{measurement}"')
-        tags = sorted([t['tagKey'] for t in reply.get_points()])
-
         pointsPerTagSet = {}
+        tags = []
+        if cls.version == Versions.V1:
+            # Retrieve the list of tags from the server, to separate from fields
+            reply = cls.client.query(f'show tag keys on "{cls.database}" from "{measurement}"')
+            tags = sorted([t['tagKey'] for t in reply.get_points()])
 
-        # Retrieve all points, separated depending on the tags
-        reply = cls.client.query(f'SELECT * FROM "{measurement}" WHERE ExecutionId =~ /^{executionId}$/')
-        for point in reply.get_points():
-            tagSet = _getTagSet(point, tags)
-            if tagSet not in pointsPerTagSet.keys():
-                pointsPerTagSet[tagSet] = []
-            pointsPerTagSet[tagSet].append(point)
+            # Retrieve all points, separated depending on the tags
+            reply = cls.client.query(f'SELECT * FROM "{measurement}" WHERE ExecutionId =~ /^{executionId}$/')
+            for point in reply.get_points():
+                tagSet = _getTagSet(point, tags)
+                if tagSet not in pointsPerTagSet.keys():
+                    pointsPerTagSet[tagSet] = []
+                pointsPerTagSet[tagSet].append(point)
+
+        elif cls.version == Versions.V2:
+            # Retrieve the list of tags from the server, to separate from fields
+            reply = cls.client.query_api().query(f'''
+            import "influxdata/influxdb/schema"
+            schema.tagKeys(
+            bucket: "{cls.database}",
+            predicate: (r) => r["_measurement"] == "{measurement}",
+            start: 0)
+            ''', org=Config().InfluxDb.Org)
+            tags = sorted([record.get_value() for table in reply for record in table.records])
+
+            # Retrieve all points, separated depending on the tags
+            reply = cls.client.query_api().query(f'''
+            from(bucket: "{cls.database}")
+            |> range(start: 0)
+            |> filter(fn: (r) => r._measurement == "{measurement}")
+            ''', org=Config().InfluxDb.Org)
+            for table in reply:
+                for point in table.records:
+                    tagSet = _getTagSet(point, tags)
+                    if tagSet not in pointsPerTagSet.keys():
+                        pointsPerTagSet[tagSet] = []
+                    pointsPerTagSet[tagSet].append(point)
 
         res = []
 
         # Process each set of points as a separate InfluxPayload
+        influxPoint = None
         for points in pointsPerTagSet.values():
             payload = InfluxPayload(f'Remote_{measurement}')
             for tag in tags:
                 payload.Tags[tag] = points[0][tag]
 
             for point in points:
-                timestamp = point.pop('time')
-                influxPoint = InfluxPoint(_getDateTime(timestamp))
+                if cls.version == Versions.V2:
+                    point = {"measurement": point.get_measurement(), "field": point.get_field(),
+                             "value": point.get_value(), "time": point.get_time(), **point.values}
+                    timestamp = point.pop('time')
+                    influxPoint = InfluxPoint(timestamp)
+                elif cls.version == Versions.V1:
+                    timestamp = point.pop('time')
+                    influxPoint = InfluxPoint(_getDateTime(timestamp))
                 for key in [f for f in point.keys() if f not in tags]:
                     influxPoint.Fields[key] = point[key]
                 payload.Points.append(influxPoint)
@@ -224,4 +323,3 @@ class InfluxDb:
             res.append(payload)
 
         return res
-

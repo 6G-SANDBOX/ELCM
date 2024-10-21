@@ -9,4 +9,8 @@ PyYAML~=6.0
 kafka-python~=2.0.2
 prometheus-api-client~=0.5.5
 paho-mqtt~=2.1.0
+urllib3~=2.2.3
+requests~=2.32.3
+influxdb-client~=1.46.0
 paramiko~=3.5.0
+

@@ -62,9 +62,12 @@ class restApi(validable):
 
 class loginRestApi(restApi):
     def __init__(self, data: Dict, section: str, defaults: Dict[str, Tuple[Optional[object], "Level"]]):
-        if 'User' not in defaults.keys(): defaults['User'] = (None, Level.ERROR)
-        if 'Password' not in defaults.keys(): defaults['Password'] = (None, Level.ERROR)
-        super().__init__(data, section, defaults)
+        if section == 'InfluxDb V2':
+            super().__init__(data, section, defaults)
+        else:
+            if 'User' not in defaults.keys(): defaults['User'] = (None, Level.ERROR)
+            if 'Password' not in defaults.keys(): defaults['Password'] = (None, Level.ERROR)
+            super().__init__(data, section, defaults)
 
     @property
     def User(self):
