@@ -88,9 +88,7 @@ class KafkaConsummerToInflux(ToInfluxBase):
                     data = message.value
                     flattened_data = self._flatten_json(data)
                     for key, value, timestamp in flattened_data:
-                        # Convert integer values to float
-                        if isinstance(value, int):
-                            value = float(value)
+                        
                         measurement_data = {key: value}
                         # Send the flattened data to InfluxDB
                         self._send_to_influx(measurement, measurement_data, timestamp, executionId)
