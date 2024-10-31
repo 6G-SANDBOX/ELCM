@@ -12,12 +12,6 @@ class ToInfluxBase(Task):
         if isinstance(value, str):
             
             try:
-                return int(value)
-            except ValueError:
-                pass
-
-            
-            try:
                 return float(value)
             except ValueError:
                 pass
