@@ -1,0 +1,47 @@
+Version: 2
+Name: KAFKA
+Sequence:
+  - Order: 1
+    Task: Flow.Parallel
+    Children:
+      - Task: Run.KafkaConsummerToInflux
+        Config:
+          ExecutionId: "@{ExecutionId}"
+          Ip: "192.168.xxx.xxx"
+          Port: "9092"
+          Topic: "sensor_data"
+          Measurement: KAFKA
+          Stop: "stop_kafka"
+          Account: False
+          Encryption: False
+      - Task: Flow.Sequence
+        Children:
+        - Task: Run.Delay
+          Config:
+            Time: 60   
+        - Task: Run.StopTask
+          Config:
+            ExecutionId: "@{ExecutionId}"
+            Name: "stop_kafka"
+Standard: True
+Dashboard:
+  - Name: "Temperature_KAFKA"
+    Measurement: "KAFKA"
+    Field: "temperature"
+    Type: Graph
+    Interval: 1s
+    Unit: celsius
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
+  - Name: "Humidity_KAFKA"
+    Measurement: "KAFKA"
+    Field: "humidity"
+    Type: Graph
+    Interval: 1s
+    Unit: percent
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False

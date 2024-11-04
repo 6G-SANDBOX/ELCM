@@ -1,0 +1,37 @@
+Version: 2
+Name: MQTT
+Sequence:
+  - Order: 1
+    Task: Flow.Parallel
+    Children:
+      - Task: Run.MqttToInflux
+        Config:
+          ExecutionId: "@{ExecutionId}"
+          Broker: "192.168.xxx.xxx" 
+          Port: "1885"
+          Topic: "my/topic/xxxx"
+          Measurement: MQTT
+          Stop: "stop_mqtt"
+          Account: False
+          Encryption: False  
+      - Task: Flow.Sequence
+        Children:
+        - Task: Run.Delay
+          Config:
+            Time: 60
+        - Task: Run.StopTask
+          Config:
+            ExecutionId: "@{ExecutionId}"
+            Name: "stop_mqtt"
+Standard: True
+Dashboard:
+  - Name: "Temperature_MQTT"
+    Measurement: "MQTT"
+    Field: "temperature"
+    Type: Graph
+    Interval: 1s
+    Unit: celsius
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
