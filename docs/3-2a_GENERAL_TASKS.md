@@ -475,7 +475,7 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 - `ReleaseName`: Chart release name
 - `HelmChartPath`: Path of the HelmChart to be deployed
 
-## **Run.InfluxToCsv**
+## Run.InfluxToCsv
 
 **Description**:
 
@@ -496,6 +496,7 @@ This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV 
 
 **YAML Configuration Example**:
 ```yaml
+Version: 2
 Name: EXPORT_INFLUX_TO_CSV
 Sequence:
   - Order: 1
@@ -506,13 +507,13 @@ Sequence:
       Bucket: "my_bucket"                        # (v2.x only) The InfluxDB bucket for v2.x
 ```
 
-## **Run.EmailFiles**
+## Run.EmailFiles
 
 **Description**:
 
 The **EmailFiles** task automates the process of compressing files from a specified directory into a ZIP file, attaching it to an email, and sending it to a designated receiver. It filters the files by an execution ID, ensuring that only relevant files are included in the ZIP. After the email is sent, the task deletes the original files and the generated ZIP file, maintaining a clean environment.
 
-### **How It Works**:
+**How It Works**:
 
 1. **Initialization**:
    - The task starts by configuring necessary parameters like `ExecutionId`, `Email`, and `DirectoryPath` to determine the files to be processed and the email recipient.
@@ -533,15 +534,16 @@ The **EmailFiles** task automates the process of compressing files from a specif
    - Once the email is sent, the task deletes the original files that were included in the ZIP to avoid redundancy.
    - The ZIP file is also deleted after the email is successfully sent, leaving no leftover files.
 
-### **Configuration Parameters**:
+**Configuration Parameters**:
 
 - **ExecutionId** (required): A unique identifier used to filter files for the ZIP and reference in the email content.
 - **Email** (required): The email address of the recipient to whom the ZIP file will be sent.
 - **DirectoryPath** (required): The directory path containing the files to be processed. Files within this directory that contain the `ExecutionId` in their name will be compressed into the ZIP.
 
-### **YAML Configuration Example**:
+**YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: SEND_EMAIL_WITH_FILES
 Sequence:
   - Order: 1
