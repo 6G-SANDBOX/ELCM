@@ -16,7 +16,6 @@ import enum
 class Versions(enum.Enum):
     V1 = "1"
     V2 = "v2"
-    UNKNOWN = "Unknown version"
 
 
 class InfluxPoint:
@@ -101,7 +100,7 @@ class InfluxDb:
             elif header.startswith(Versions.V1.value):
                 return Versions.V1
             else:
-                return Versions.UNKNOWN
+                raise Exception("Unknown influxDB version")
         except requests.exceptions.RequestException as e:
             raise RequestException("Can't connect to InfluxDB server")
 
@@ -120,8 +119,6 @@ class InfluxDb:
                 cls.client = InfluxDBClient_v2(url=influxdb_url,
                                                token=influx.Token,
                                                org=influx.Org)
-            elif cls.version == Versions.UNKNOWN:
-                raise Exception("Unknown influxDB version")
         except Exception as e:
             raise Exception(f"Exception while creating Influx client, please review configuration: {e}") from e
 
