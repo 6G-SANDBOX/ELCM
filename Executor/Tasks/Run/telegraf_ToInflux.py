@@ -21,7 +21,7 @@ class TelegrafToInflux(ToInfluxBase):
 
         self.executionId = self.params['ExecutionId']
         self.use_ssl = self.params.get('Encryption', False)  # Check if SSL is to be used
-        base_path = self.params['Certificates']
+        base_path = self.params.get('Certificates', "")
 
         # Paths to SSL certificate files
         self.certfile = base_path + "server-cert.pem"
@@ -39,8 +39,7 @@ class TelegrafToInflux(ToInfluxBase):
             value = flattened_data[key]
             if isinstance(value, int):
                 flattened_data[key] = float(value)
-                
-        
+            
         # Send the flattened data to InfluxDB
         self._send_to_influx(measurement, flattened_data, timestamp, self.executionId)
         

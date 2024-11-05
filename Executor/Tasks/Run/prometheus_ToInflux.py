@@ -77,7 +77,7 @@ class PrometheusToInflux(ToInfluxBase):
 
             for entry in entries:
                 timestamp = int(entry[0])
-                value = float(entry[1]) if isinstance(entry[1], int) else entry[1]
+                value = entry[1]
 
                 if timestamp not in data_dict:
                     data_dict[timestamp] = {query: value}

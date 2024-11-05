@@ -238,6 +238,7 @@ This task uses encryption to secure the connection:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: KAFKA
 Sequence:
   - Order: 1
@@ -255,6 +256,9 @@ Sequence:
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 
 ```
+
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.KafkaConsummerToInflux task. This ensures that the task terminates properly and stops retrieving data from Kakfa. 
+
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 ## Run.MqttToInflux
 
@@ -290,6 +294,7 @@ This task uses encryption to secure the MQTT connection:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: MQTT
 Sequence:
   - Order: 1
@@ -305,6 +310,8 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.MqttToInflux task. This ensures that the task terminates properly and stops retrieving data from MQTT.
+
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.PrometheusToInflux
@@ -345,6 +352,7 @@ This task uses encryption to secure the connection:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: PROMETHEUS
 Sequence:
   - Order: 1
@@ -366,6 +374,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.PrometheusToInflux task. This ensures that the task terminates properly and stops retrieving data from Prometheus.
 
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
@@ -397,6 +406,7 @@ If SSL/TLS encryption is enabled:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: TELEGRAF
 Sequence:
   - Order: 1
@@ -407,6 +417,7 @@ Sequence:
       Encryption: True       # Set to True if TLS/SSL is used, False otherwise
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
 ```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.TelegrafToInflux task. This ensures that the task terminates properly and stops retrieving data from Telegraf.
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.EmailNotification
@@ -435,6 +446,7 @@ The task uses SMTP for sending the email:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: EMAIL
 Sequence:
   - Order: 1
@@ -460,6 +472,7 @@ This task sends a stop signal by putting a specific message into a control queue
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: STOP_TASK
 Sequence:
   - Order: 1
@@ -501,6 +514,7 @@ The `CliSsh` task establishes an SSH connection to a remote server, executes a s
 
 **YAML Configuration Example**
 ```yaml
+Version: 2
 Name: CLI_SSH
 Sequence:
   - Order: 1

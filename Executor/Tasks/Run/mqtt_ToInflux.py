@@ -30,9 +30,7 @@ class MqttToInflux(ToInfluxBase):
         flattened_data = self._flatten_json(data)
 
         for key, value, timestamp in flattened_data:
-            # Convert integer values to float
-            if isinstance(value, int):
-                value = float(value)
+            
             measurement_data = {key: value}
 
             try:
