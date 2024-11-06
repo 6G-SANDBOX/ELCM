@@ -1,6 +1,6 @@
 from typing import Dict, Tuple, List
 from Helper import Serialize
-from Helper.influx import InfluxDb
+from Helper.influx import InfluxDb, Versions
 from Settings import Config
 
 
@@ -49,9 +49,10 @@ class DashboardPanel:
         elif self.Type.lower() == "singlestat":
             res = self.singlestatPanel(panelId, title, gridPos)
 
-        if InfluxDb.detectInfluxDBVersion(influx_url) == InfluxDb.version.V1:
+        # versions = InfluxDb.version
+        if InfluxDb.detectInfluxDBVersion(influx_url) == Versions.V1:
             res["targets"] = [self.getTargetV1(executionId)]
-        elif InfluxDb.detectInfluxDBVersion(influx_url) == InfluxDb.version.V2:
+        elif InfluxDb.detectInfluxDBVersion(influx_url) == Versions.V2:
             res["targets"] = [self.getTargetV2(executionId)]
         return res
 
