@@ -1,9 +1,12 @@
 from typing import Dict, Tuple, List
 from Helper import Serialize
+from Helper.influx import InfluxDb, Versions
+from Settings import Config
 
 
 class DashboardPanel:
     def __init__(self, data: Dict):
+        config = Config()
         self.Type, self.Name = Serialize.Unroll(data, "Type", "Name")
         self.MinValue, self.MaxValue, self.Gauge = Serialize.Unroll(data, "MinValue", "MaxValue", "Gauge")
         self.Measurement, self.Field = Serialize.Unroll(data, "Measurement", "Field")
@@ -11,6 +14,7 @@ class DashboardPanel:
         self.Size, self.Position = Serialize.Unroll(data, "Size", "Position")
         self.Interval, self.Lines, self.Percentage = Serialize.Unroll(data, "Interval", "Lines", "Percentage")
         self.Dots, self.Color, self.Thresholds = Serialize.Unroll(data, "Dots", "Color", "Thresholds")
+        self.influx_config = config.InfluxDb
 
     def AsDict(self):
         return {
@@ -25,6 +29,7 @@ class DashboardPanel:
 
     def Generate(self, panelId: int, executionId: int) -> Dict:
         res = {}
+        influx_url = f'http://{self.influx_config.Host}:{self.influx_config.Port}'
 
         try:
             title = f"{self.Measurement}: {self.Field}" if self.Name is None else self.Name
@@ -43,7 +48,12 @@ class DashboardPanel:
             res = self.graphPanel(panelId, title, gridPos)
         elif self.Type.lower() == "singlestat":
             res = self.singlestatPanel(panelId, title, gridPos)
-        res["targets"] = [self.getTarget(executionId)]
+
+        # versions = InfluxDb.version
+        if InfluxDb.detectInfluxDBVersion(influx_url) == Versions.V1:
+            res["targets"] = [self.getTargetV1(executionId)]
+        elif InfluxDb.detectInfluxDBVersion(influx_url) == Versions.V2:
+            res["targets"] = [self.getTargetV2(executionId)]
         return res
 
     def singlestatColor(self) -> Dict:
@@ -60,7 +70,7 @@ class DashboardPanel:
                 if not isinstance(self.Color, str):
                     raise RuntimeError(f"Error: Panel with incorrectly defined Color. "
                                        f"Expected str, found {self.Color} ")
-                colors = [self.Color]*3
+                colors = [self.Color] * 3
         return {
             "thresholds": "",
             "colorBackground": False,
@@ -72,7 +82,7 @@ class DashboardPanel:
         if self.Gauge:
             try:
                 a, b, c, d = self.Thresholds
-                return{
+                return {
                     "gauge": {
                         "show": True, "minValue": a, "maxValue": d, "thresholdMarkers": True, "thresholdLabels": True
                     },
@@ -81,7 +91,7 @@ class DashboardPanel:
             except Exception as e:
                 raise RuntimeError(f'Error: Gauge panel with incorrect or no Thresholds: {e}')
         else:
-            return{
+            return {
                 "gauge": {
                     "show": False, "minValue": 0, "maxValue": 0, "thresholdMarkers": True, "thresholdLabels": True
                 }
@@ -184,7 +194,7 @@ class DashboardPanel:
             "yaxis": {"align": False, "alignLevel": None}
         }
 
-    def getTarget(self, executionId: int) -> Dict:
+    def getTargetV1(self, executionId: int) -> Dict:  # Get Target for InfluxDB V1
         return {
             "hide": False,
             "measurement": self.Measurement,
@@ -204,6 +214,19 @@ class DashboardPanel:
                 ]
             ],
             "tags": [{"key": "ExecutionId", "operator": "=", "value": str(executionId)}]
+        }
+
+    def getTargetV2(self, executionId: int) -> Dict:  # Get Target for InfluxDB V2
+        flux_query = (
+            f"from(bucket: \"{self.influx_config.Database}\") |> range(start: v.timeRangeStart, stop: "
+            f"v.timeRangeStop) |> filter(fn: (r) => r[\"_measurement\"] == \"{self.Measurement}\") |> filter(fn: (r) "
+            f"=> r[\"ExecutionId\"] == \"{executionId}\") |> filter(fn: (r) => r[\"_field\"] == \"{self.Field}\") |> "
+            f"aggregateWindow(every: {self.Interval}, fn: mean, createEmpty: false)")
+
+        return {
+            "query": flux_query,
+            "format": "flux",
+            "refId": "A"
         }
 
     def Validate(self) -> Tuple[bool, str]:
