@@ -8,16 +8,15 @@
 
 #### 5Genesis components
 
- - [Portal](https://github.com/5genesis/Portal) Version 2.4.0 (22/12/2020) or later
- - [Dispatcher](https://github.com/5genesis/Dispatcher) Commit 2c05c28e812fb712f73b51ab78c1d190c0f50d0e (04/01/2021) or later
+ - [Portal](https://github.com/5genesis/Portal) Version 3.0.0 (28/10/2024) or later
  - [Katana Slice Manager](https://github.com/5genesis/katana-slice_manager) Version 2.2.6 (14/07/2020) or later
 
 #### Third party components
 
- - [Grafana](https://grafana.com/) (tested with version 5.4)
- - [Grafana reporter](https://github.com/IzakMarais/reporter) (tested with version 2.1.0, commit 41b38a0)
- - [InfluxDB](https://www.influxdata.com/products/influxdb/) (tested with version 1.7.6)
+ - [Grafana](https://grafana.com/) (tested with versions 5.4 and 11.3.0)
+ - [InfluxDB](https://www.influxdata.com/products/influxdb/) (tested with versions 1.7.6 and 2.7.10)
  - [OpenTAP](https://www.opentap.io/) (tested with version 9.9 (Windows))
+ - [Grafana reporter](https://github.com/IzakMarais/reporter) (tested with version 2.1.0, commit 41b38a0)
 
 ## Deployment
 
