@@ -570,7 +570,7 @@ Sequence:
   - Order: 1
     Task: Run.AthonetToInflux
     Config:
-      ExecutionId: "12345"                    # Unique execution identifier
+      ExecutionId: "@{ExecutionId}"                    # Unique execution identifier
       QueriesRange: 
         - "query1"           # Prometheus range query
         - "query2"           # Another Prometheus range query
