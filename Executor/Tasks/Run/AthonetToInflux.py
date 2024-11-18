@@ -8,8 +8,7 @@ import re
 class AthonetToInflux(ToInfluxBase):
 
     def sanitize_metric_name(self, name):
-        name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
-        return name.rstrip('_')
+        return re.sub(r'[^a-zA-Z0-9_]', '_', name).rstrip('_')
 
     def authenticate(self):
         login_url = self.params.get('AthonetLoginUrl')
@@ -35,7 +34,18 @@ class AthonetToInflux(ToInfluxBase):
             self.Log(Level.ERROR, f"Authentication error: {e}")
             self.access_token = None
 
-    
+    def reauthenticate_and_get_prometheus(self):
+        self.Log(Level.WARNING, "Token expired. Attempting re-authentication.")
+        session = self.init_prometheus_session()
+        if session:
+            prometheus = PrometheusConnect(url=session['url'], session=session['session'])
+            if prometheus.check_prometheus_connection():
+                self.Log(Level.INFO, "Re-authentication successful.")
+                return prometheus
+        self.Log(Level.ERROR, "Failed to re-authenticate or connect to Prometheus.")
+        self.SetVerdictOnError()
+        return None
+
     def send_data_to_influx(self, data_dict, measurement, executionId):
         for timestamp, data in data_dict.items():
             try:
@@ -86,14 +96,16 @@ class AthonetToInflux(ToInfluxBase):
                 self.Log(Level.INFO, f"Range query executed successfully: {query}")
                 if data:
                     self.store_query_data(data, query, data_dict)
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 401:
-                    self.Log(Level.WARNING, "Token expired. Attempting re-authentication.")
-                    self.authenticate()
+            except Exception as e:
+                if not prometheus.check_prometheus_connection():
+                    prometheus = self.reauthenticate_and_get_prometheus()
+                    if not prometheus:
+                        return
                     # Retry the query after re-authentication
                     self.process_range_queries(prometheus, [query], start_time, end_time, step, data_dict)
                 else:
                     self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
+                    return
 
     def process_custom_queries(self, prometheus, queries_custom, data_dict):
         for query in queries_custom:
@@ -102,15 +114,17 @@ class AthonetToInflux(ToInfluxBase):
                 self.Log(Level.INFO, f"Custom query executed successfully: {query}")
                 if data:
                     self.store_query_data(data, query, data_dict)
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 401:
-                    self.Log(Level.WARNING, "Token expired. Attempting re-authentication.")
-                    self.authenticate()
+            except Exception as e:
+                if not prometheus.check_prometheus_connection():
+                    prometheus = self.reauthenticate_and_get_prometheus()
+                    if not prometheus:
+                        return
                     # Retry the query after re-authentication
                     self.process_custom_queries(prometheus, [query], data_dict)
                 else:
                     self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
-                 
+                    return
+
     def __init__(self, logMethod, parent, params):
         
         super().__init__("ATHONET", parent, params, logMethod, None)
