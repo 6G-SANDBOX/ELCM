@@ -1,15 +1,49 @@
 from prometheus_api_client import PrometheusConnect
-from .prometheus_ToInflux import PrometheusToInflux
+from .to_influx import ToInfluxBase
 from Helper import utils, Level
 from datetime import datetime
 import requests
 import re
 
-class AthonetToInflux(PrometheusToInflux):
+class AthonetToInflux(ToInfluxBase):
 
     def sanitize_metric_name(self, name):
         name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
         return name.rstrip('_')
+
+    def authenticate(self):
+        login_url = self.params.get('AthonetLoginUrl')
+        username = self.params.get('Username')
+        password = self.params.get('Password')
+
+        if not login_url or not username or not password:
+            self.Log(Level.ERROR, "Login URL, username, or password not provided.")
+            return
+
+        try:
+            response = requests.post(
+                login_url,
+                json={"username": username, "password": password},
+                verify=False
+            )
+            response.raise_for_status()
+            self.access_token = response.json().get("access_token")
+            if not self.access_token:
+                raise ValueError("No access token returned.")
+            self.Log(Level.INFO, "Authentication successful, access token obtained.")
+        except Exception as e:
+            self.Log(Level.ERROR, f"Authentication error: {e}")
+            self.access_token = None
+
+    
+    def send_data_to_influx(self, data_dict, measurement, executionId):
+        for timestamp, data in data_dict.items():
+            try:
+                self._send_to_influx(measurement, data, timestamp, executionId)
+            except Exception as e:
+                self.Log(Level.ERROR, f"Error sending data to InfluxDB: {e}")
+                self.SetVerdictOnError()
+                return
 
     def store_query_data(self, data, query, data_dict):
         for result in data:
@@ -39,18 +73,47 @@ class AthonetToInflux(PrometheusToInflux):
                     data_dict[timestamp] = {metric_name: metric_value}
                 else:
                     data_dict[timestamp][metric_name] = metric_value
+
+    def process_range_queries(self, prometheus, queries_range, start_time, end_time, step, data_dict):
+        for query in queries_range:
+            try:
+                data = prometheus.custom_query_range(
+                    query=query,
+                    start_time=start_time,
+                    end_time=end_time,
+                    step=step
+                )
+                self.Log(Level.INFO, f"Range query executed successfully: {query}")
+                if data:
+                    self.store_query_data(data, query, data_dict)
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 401:
+                    self.Log(Level.WARNING, "Token expired. Attempting re-authentication.")
+                    self.authenticate()
+                    # Retry the query after re-authentication
+                    self.process_range_queries(prometheus, [query], start_time, end_time, step, data_dict)
+                else:
+                    self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
+
+    def process_custom_queries(self, prometheus, queries_custom, data_dict):
+        for query in queries_custom:
+            try:
+                data = prometheus.custom_query(query=query)
+                self.Log(Level.INFO, f"Custom query executed successfully: {query}")
+                if data:
+                    self.store_query_data(data, query, data_dict)
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 401:
+                    self.Log(Level.WARNING, "Token expired. Attempting re-authentication.")
+                    self.authenticate()
+                    # Retry the query after re-authentication
+                    self.process_custom_queries(prometheus, [query], data_dict)
+                else:
+                    self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
                  
     def __init__(self, logMethod, parent, params):
-        athonet_defaults = {
-            'Url': "",
-            'Port': "",
-            'Account': False,
-            'Certificates': None,
-            'Encryption': False,
-        }
         
-        params = {**athonet_defaults, **params}
-        super().__init__(logMethod, parent, params)
+        super().__init__("ATHONET", parent, params, logMethod, None)
 
         self.paramRules = {
             'ExecutionId': (None, True),
@@ -68,35 +131,9 @@ class AthonetToInflux(PrometheusToInflux):
         self.access_token = None
         self.Log(Level.INFO, f"{self.name} initialized")
 
-    def authenticate(self):
-        login_url = self.params.get('AthonetLoginUrl')
-        username = self.params.get('Username')
-        password = self.params.get('Password')
-
-        if not login_url or not username or not password:
-            self.Log(Level.ERROR, "Login URL, username, or password not provided.")
-            return
-
-        try:
-            response = requests.post(
-                login_url,
-                json={"username": username, "password": password},
-                verify=False
-            )
-            response.raise_for_status()
-            self.access_token = response.json().get("access_token")
-            if not self.access_token:
-                raise ValueError("No access token returned.")
-            self.Log(Level.INFO, "Authentication successful, access token obtained.")
-        except Exception as e:
-            self.Log(Level.ERROR, f"Authentication error: {e}")
-            self.access_token = None
-
     def init_prometheus_session(self):
         athonet_query_url = self.params['AthonetQueryUrl']
-
-        if not self.access_token:
-            self.authenticate()
+        self.authenticate()
 
         if not self.access_token:
             self.Log(Level.ERROR, "Failed to obtain access token for Prometheus queries.")
@@ -120,6 +157,13 @@ class AthonetToInflux(PrometheusToInflux):
         step = self.params['Step']
         measurement = self.params['Measurement']
 
+        while stop not in utils.task_list:
+            pass
+        utils.task_list.remove(stop)
+        end_time = datetime.now()
+
+        data_dict = {}
+
         session = self.init_prometheus_session()
         if session is None:
             self.Log(Level.ERROR, "Failed to initialize Prometheus session")
@@ -132,20 +176,11 @@ class AthonetToInflux(PrometheusToInflux):
             self.SetVerdictOnError()
             return
 
-        while stop not in utils.task_list:
-            pass
-        utils.task_list.remove(stop)
-        end_time = datetime.now()
-
-        data_dict = {}
-
         try:
             if queries_range:
-                
                 self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
 
             if queries_custom:
-                
                 self.process_custom_queries(prometheus, queries_custom, data_dict)
 
             if data_dict:
