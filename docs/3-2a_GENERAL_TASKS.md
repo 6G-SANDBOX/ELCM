@@ -526,3 +526,62 @@ Sequence:
       Certificate: "/path/to/private_key"     # Path to the private key for authentication
       Command: "ifconfig"                     # Command to execute on the remote server
 ```
+## Run.AthonetToInflux
+
+**Description**:
+
+The `AthonetToInflux` task fetches monitoring data from an Athonet system using Prometheus queries and sends the processed data to an InfluxDB instance. It handles token-based authentication, range-based and custom Prometheus queries, and efficient data mapping for InfluxDB insertion.
+
+**How It Works**:
+1. **Initialization**:
+   - The task is configured with required parameters for authentication, Prometheus query execution, and InfluxDB data insertion.
+   - Parameters include Athonet URLs, authentication credentials, query details, and execution configurations.
+
+2. **Authentication**:
+   - Authenticates to the Athonet system using the provided username and password, retrieving an access token required for subsequent Prometheus queries.
+
+3. **Prometheus Query Execution**:
+   - Supports both range-based and custom Prometheus queries to fetch monitoring data.
+   - Handles token expiration by automatically re-authenticating when necessary.
+
+4. **Data Processing**:
+   - Processes the retrieved Prometheus data, sanitizes metric names, and organizes the data into a dictionary for InfluxDB insertion.
+
+5. **Data Insertion into InfluxDB**:
+   - Sends the processed data to an InfluxDB instance with proper timestamp mapping, measurement configuration, and execution context.
+
+**Configuration Parameters**:
+- `ExecutionId` (required): Unique identifier for the execution instance.
+- `QueriesRange` (optional): List of Prometheus range queries to execute.
+- `QueriesCustom` (optional): List of custom Prometheus queries to execute.
+- `Measurement` (required): The InfluxDB measurement name where data will be stored.
+- `Stop` (required): A stop condition identifier, ensuring the task terminates upon specific criteria.
+- `Step` (required): Time step for Prometheus range queries.
+- `Username` (required): Athonet authentication username.
+- `Password` (required): Athonet authentication password.
+- `AthonetLoginUrl` (required): URL for Athonet authentication.
+- `AthonetQueryUrl` (required): URL for Prometheus queries on the Athonet system.
+
+**YAML Configuration Example**:
+```yaml
+Version: 2
+Name: ATHONET_TO_INFLUX
+Sequence:
+  - Order: 1
+    Task: Run.AthonetToInflux
+    Config:
+      ExecutionId: "12345"                    # Unique execution identifier
+      QueriesRange: 
+        - "query1"           # Prometheus range query
+        - "query2"           # Another Prometheus range query
+      QueriesCustom:
+        - "query3"           # Custom Prometheus query
+      Measurement: "athonet_metrics"         # InfluxDB measurement name
+      Stop: "stop_athonet"           # Stop condition identifier
+      Step: "1s"                            # Time step for range queries
+      Username: "admin"                      # Athonet username
+      Password: "password"                   # Athonet password
+      AthonetLoginUrl: "https://athonet.example.com/core/login" # Athonet login URL
+      AthonetQueryUrl: "https://athonet.example.com/core/prometheus"   # Athonet Prometheus query URL
+```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.
