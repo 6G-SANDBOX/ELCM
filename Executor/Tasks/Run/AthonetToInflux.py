@@ -87,7 +87,7 @@ class AthonetToInflux(ToInfluxBase):
                     data_dict[timestamp][metric_name] = metric_value
 
     def process_range_queries(self, prometheus, queries_range, start_time, end_time, step, data_dict):
-        for query in queries_range:
+        for i, query in enumerate(queries_range):
             try:
                 data = prometheus.custom_query_range(
                     query=query,
@@ -99,33 +99,31 @@ class AthonetToInflux(ToInfluxBase):
                 if data:
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
+                self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
                 if not prometheus.check_prometheus_connection():
                     prometheus = self.reauthenticate_and_get_prometheus()
                     if not prometheus:
+                        self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
                         return
-                    # Retry the query after re-authentication
-                    self.process_range_queries(prometheus, [query], start_time, end_time, step, data_dict)
-                else:
-                    self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
-                    return
+                self.Log(Level.WARNING, f"Retrying remaining queries from '{query}'.")
+                self.process_range_queries(prometheus, queries_range[i:], start_time, end_time, step, data_dict)
 
     def process_custom_queries(self, prometheus, queries_custom, data_dict):
-        for query in queries_custom:
+        for i, query in enumerate(queries_custom):
             try:
                 data = prometheus.custom_query(query=query)
                 self.Log(Level.INFO, f"Custom query executed successfully: {query}")
                 if data:
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
+                self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
                 if not prometheus.check_prometheus_connection():
                     prometheus = self.reauthenticate_and_get_prometheus()
                     if not prometheus:
+                        self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
                         return
-                    # Retry the query after re-authentication
-                    self.process_custom_queries(prometheus, [query], data_dict)
-                else:
-                    self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
-                    return
+                self.Log(Level.WARNING, f"Retrying remaining queries from '{query}'.")
+                self.process_custom_queries(prometheus, queries_custom[i:], data_dict)
 
     def __init__(self, logMethod, parent, params):
         
