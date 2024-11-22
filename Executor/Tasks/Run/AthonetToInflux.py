@@ -4,10 +4,29 @@ from Helper import utils, Level
 from datetime import datetime
 import requests
 import re
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import time
 
 class AthonetToInflux(ToInfluxBase):
+
+    def __init__(self, logMethod, parent, params):
+        
+        super().__init__("ATHONET", parent, params, logMethod, None)
+
+        self.paramRules = {
+            'ExecutionId': (None, True),
+            'QueriesRange': (None, False),
+            'QueriesCustom': (None, False),
+            'Measurement': (None, True),
+            'Stop': (None, True),
+            'Step': (None, True),
+            'Username': (None, True),  
+            'Password': (None, True),  
+            'AthonetLoginUrl': (None, True), 
+            'AthonetQueryUrl': (None, True)
+        }
+
+        self.access_token = None
+        self.Log(Level.INFO, f"{self.name} initialized")
 
     def sanitize_metric_name(self, name):
         return re.sub(r'[^a-zA-Z0-9_]', '_', name).rstrip('_')
@@ -125,26 +144,6 @@ class AthonetToInflux(ToInfluxBase):
                 self.Log(Level.WARNING, f"Retrying remaining queries from '{query}'.")
                 self.process_custom_queries(prometheus, queries_custom[i:], data_dict)
 
-    def __init__(self, logMethod, parent, params):
-        
-        super().__init__("ATHONET", parent, params, logMethod, None)
-
-        self.paramRules = {
-            'ExecutionId': (None, True),
-            'QueriesRange': (None, False),
-            'QueriesCustom': (None, False),
-            'Measurement': (None, True),
-            'Stop': (None, True),
-            'Step': (None, True),
-            'Username': (None, True),  
-            'Password': (None, True),  
-            'AthonetLoginUrl': (None, True), 
-            'AthonetQueryUrl': (None, True)
-        }
-
-        self.access_token = None
-        self.Log(Level.INFO, f"{self.name} initialized")
-
     def init_prometheus_session(self):
         athonet_query_url = self.params['AthonetQueryUrl']
         self.authenticate()
@@ -157,10 +156,10 @@ class AthonetToInflux(ToInfluxBase):
             session = requests.Session()
             session.verify = False
             session.headers.update({"Authorization": f"Bearer {self.access_token}"})
-            return {'url': athonet_query_url, 'session': session}
+            return athonet_query_url, session
         except Exception as e:
             self.Log(Level.ERROR, f"Error initializing Prometheus session: {e}")
-            return None
+            return None, None
 
     def Run(self):
         executionId = self.params['ExecutionId']
@@ -172,18 +171,19 @@ class AthonetToInflux(ToInfluxBase):
         measurement = self.params['Measurement']
 
         while stop not in utils.task_list:
+            time.sleep(1)
             pass
         utils.task_list.remove(stop)
         end_time = datetime.now()
 
         data_dict = {}
 
-        session = self.init_prometheus_session()
+        url, session = self.init_prometheus_session()
         if session is None:
             self.Log(Level.ERROR, "Failed to initialize Prometheus session")
             return
 
-        prometheus = PrometheusConnect(url=session['url'], session=session['session'])
+        prometheus = PrometheusConnect(url=url, session=session)
 
         if not prometheus.check_prometheus_connection():
             self.Log(Level.ERROR, "Failed to connect to Prometheus")
