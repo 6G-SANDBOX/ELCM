@@ -57,9 +57,9 @@ class AthonetToInflux(ToInfluxBase):
 
     def reauthenticate_and_get_prometheus(self):
         self.Log(Level.WARNING, "Token expired. Attempting re-authentication.")
-        session = self.init_prometheus_session()
+        url, session = self.init_prometheus_session()
         if session:
-            prometheus = PrometheusConnect(url=session['url'], session=session['session'])
+            prometheus = PrometheusConnect(url=url, session=session)
             if prometheus.check_prometheus_connection():
                 self.Log(Level.INFO, "Re-authentication successful.")
                 return prometheus
