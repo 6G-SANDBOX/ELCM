@@ -1,3 +1,6 @@
+**05/12/2024** [Version 3.7.1]
+ - Avoid exception on start when using Python 3.12
+
 **08/11/2024** [Version 3.7.0]
  - Removed Dispatcher dependency.
    - Updated distributed experiment execution accordingly.
