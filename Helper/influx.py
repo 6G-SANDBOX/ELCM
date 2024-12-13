@@ -3,7 +3,6 @@ from influxdb_client import InfluxDBClient as InfluxDBClient_v2
 from influxdb_client import Point
 from requests import RequestException
 from influxdb_client.client.exceptions import InfluxDBError
-from influxdb_client.client.write_api import SYNCHRONOUS
 
 from Settings import Config
 from typing import Dict, List, Union
