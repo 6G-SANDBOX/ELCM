@@ -174,7 +174,6 @@ class AthonetToInflux(ToInfluxBase):
 
         while stop not in utils.task_list:
             time.sleep(1)
-            pass
         utils.task_list.remove(stop)
         end_time = datetime.now()
 
