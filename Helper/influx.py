@@ -2,6 +2,8 @@ from influxdb import InfluxDBClient as InfluxDBClient_v1
 from influxdb_client import InfluxDBClient as InfluxDBClient_v2
 from influxdb_client import Point
 from requests import RequestException
+from influxdb_client.client.exceptions import InfluxDBError
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 from Settings import Config
 from typing import Dict, List, Union
@@ -148,7 +150,7 @@ class InfluxDb:
         if cls.version == Versions.V1:
             cls.client.write_points(payload.Serialized)
         elif cls.version == Versions.V2:
-            cls.client.write_api().write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
+            cls.client.write_api(write_options=SYNCHRONOUS).write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
 
     @classmethod
     def PayloadToCsv(cls, payload: InfluxPayload, outputFile: str):
