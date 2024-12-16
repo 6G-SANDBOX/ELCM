@@ -2,7 +2,8 @@ from influxdb import InfluxDBClient as InfluxDBClient_v1
 from influxdb_client import InfluxDBClient as InfluxDBClient_v2
 from influxdb_client import Point
 from requests import RequestException
-
+from influxdb_client.client.exceptions import InfluxDBError
+from threading import local, RLock
 from Settings import Config
 from typing import Dict, List, Union
 from datetime import datetime, timezone
@@ -12,11 +13,27 @@ import re
 import requests
 import enum
 
+class BatchingCallback(object):
+
+    def __init__(self):
+        self.last_error = None
+
+    def error(self, conf: (str, str, str), data: str, exception: InfluxDBError):
+        self.last_error = exception
+
+class ThreadLocalBatchingCallback:
+
+    def __init__(self):
+        self._storage = local()
+
+    def get_callback(self):
+        if not hasattr(self._storage, 'callback'):
+            self._storage.callback = BatchingCallback()
+        return self._storage.callback
 
 class Versions(enum.Enum):
     V1 = "1"
     V2 = "v2"
-
 
 class InfluxPoint:
     def __init__(self, time: datetime):
@@ -25,7 +42,6 @@ class InfluxPoint:
 
     def __str__(self):
         return f"<{self.Time} {self.Fields}>"
-
 
 class InfluxPayload:
     def __init__(self, measurement: str):
@@ -73,7 +89,6 @@ class InfluxPayload:
             res.Points.append(influxPoint)
         return res
 
-
 class baseDialect(Dialect):
     delimiter = ','
     escapechar = None
@@ -83,12 +98,10 @@ class baseDialect(Dialect):
     quotechar = '"'
     quoting = QUOTE_NONE
 
-
 class InfluxDb:
-    client = None
-    database = None
-    baseTags = {}
-    version = None
+    _lock = RLock()
+    thread_callbacks = ThreadLocalBatchingCallback()
+    _thread_local = local()
 
     @staticmethod
     def detectInfluxDBVersion(url):
@@ -111,14 +124,17 @@ class InfluxDb:
         influxdb_url = f"http://{influx.Host}:{influx.Port}"
         cls.version = cls.detectInfluxDBVersion(influxdb_url)
 
+        if hasattr(cls._thread_local, 'client'):
+            cls.cleanup()
+
         try:
             if cls.version == Versions.V1:
-                cls.client = InfluxDBClient_v1(influx.Host, influx.Port,
-                                               influx.User, influx.Password, influx.Database)
+                cls._thread_local.client = InfluxDBClient_v1(influx.Host, influx.Port,
+                                                             influx.User, influx.Password, influx.Database)
             elif cls.version == Versions.V2:
-                cls.client = InfluxDBClient_v2(url=influxdb_url,
-                                               token=influx.Token,
-                                               org=influx.Org)
+                cls._thread_local.client = InfluxDBClient_v2(url=influxdb_url,
+                                                             token=influx.Token,
+                                                             org=influx.Org)
         except Exception as e:
             raise Exception(f"Exception while creating Influx client, please review configuration: {e}") from e
 
@@ -132,23 +148,55 @@ class InfluxDb:
         cls.database = influx.Database
 
     @classmethod
+    def cleanup(cls):
+        if hasattr(cls._thread_local, 'client'):
+            try:
+                cls._thread_local.client.close()
+                print("InfluxDB client closed successfully for the thread.", flush=True)
+            except Exception as e:
+                print(f"Error closing InfluxDB client: {e}", flush=True)
+            finally:
+                del cls._thread_local.client
+
+    @classmethod
     def BaseTags(cls) -> Dict[str, object]:
-        if cls.client is None:
-            cls.initialize()
+        if not hasattr(cls, 'baseTags') or cls.baseTags == {}:
+            config = Config()
+            metadata = config.Metadata
+            cls.baseTags = {
+                "appname": "ELCM",
+                "facility": metadata.Facility,
+                "host": metadata.HostIp,
+                "hostname": metadata.HostName
+            }
         return cls.baseTags
 
     @classmethod
     def Send(cls, payload: InfluxPayload):
-        if cls.client is None:
-            cls.initialize()
+        with cls._lock:
+            if not hasattr(cls._thread_local, 'client'):
+                cls.initialize()
 
-        payload.Tags.update(cls.baseTags)
-        payload.Version = cls.version
+            payload.Tags.update(cls.BaseTags())
+            payload.Version = cls.version
 
-        if cls.version == Versions.V1:
-            cls.client.write_points(payload.Serialized)
-        elif cls.version == Versions.V2:
-            cls.client.write_api().write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
+            callback = cls.thread_callbacks.get_callback()
+
+            try:
+                if cls.version == Versions.V1:
+                    cls._thread_local.client.write_points(payload.Serialized)
+                elif cls.version == Versions.V2:
+                    write_api = cls._thread_local.client.write_api(error_callback=callback.error)
+                    write_api.write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
+                    write_api.__del__()
+                if callback.last_error:
+                    tmp = callback.last_error
+                    callback.last_error = None
+                    raise InfluxDBError(tmp.response)
+            except Exception as e:
+                print(f"Error sending payload: {e}", flush=True)
+                cls.cleanup()
+                raise
 
     @classmethod
     def PayloadToCsv(cls, payload: InfluxPayload, outputFile: str):
@@ -186,9 +234,6 @@ class InfluxDb:
 
         keysToRemove = [] if keysToRemove is None else keysToRemove
 
-        if cls.client is None:
-            cls.initialize()
-
         with open(csvFile, 'r', encoding='utf-8', newline='') as file:
             header = file.readline()
             keys = [k.strip() for k in header.split(delimiter)]
@@ -224,15 +269,15 @@ class InfluxDb:
 
     @classmethod
     def GetExecutionMeasurements(cls, executionId: int) -> List[str]:
-        if cls.client is None:
+        if not hasattr(cls._thread_local, 'client'):
             cls.initialize()
 
         if cls.version == Versions.V1:
-            reply = cls.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
+            reply = cls._thread_local.client.query(f'SHOW measurements WHERE ExecutionId =~ /^{executionId}$/')
             return [e['name'] for e in reply['measurements']]
 
         elif cls.version == Versions.V2:
-            reply = cls.client.query_api().query(f'''
+            reply = cls._thread_local.client.query_api().query(f'''
             from(bucket: "{cls.database}")
             |> range(start: 0)
             |> filter(fn: (r) => r["ExecutionId"] == "{executionId}")
@@ -254,17 +299,18 @@ class InfluxDb:
             except ValueError:
                 return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
 
-        if cls.client is None:
+        if not hasattr(cls._thread_local, 'client'):
             cls.initialize()
+
         pointsPerTagSet = {}
         tags = []
         if cls.version == Versions.V1:
             # Retrieve the list of tags from the server, to separate from fields
-            reply = cls.client.query(f'show tag keys on "{cls.database}" from "{measurement}"')
+            reply = cls._thread_local.client.query(f'show tag keys on "{cls.database}" from "{measurement}"')
             tags = sorted([t['tagKey'] for t in reply.get_points()])
 
             # Retrieve all points, separated depending on the tags
-            reply = cls.client.query(f'SELECT * FROM "{measurement}" WHERE ExecutionId =~ /^{executionId}$/')
+            reply = cls._thread_local.client.query(f'SELECT * FROM "{measurement}" WHERE ExecutionId =~ /^{executionId}$/')
             for point in reply.get_points():
                 tagSet = _getTagSet(point, tags)
                 if tagSet not in pointsPerTagSet.keys():
@@ -273,7 +319,7 @@ class InfluxDb:
 
         elif cls.version == Versions.V2:
             # Retrieve the list of tags from the server, to separate from fields
-            reply = cls.client.query_api().query(f'''
+            reply = cls._thread_local.client.query_api().query(f'''
             import "influxdata/influxdb/schema"
             schema.tagKeys(
             bucket: "{cls.database}",
@@ -283,7 +329,7 @@ class InfluxDb:
             tags = sorted([record.get_value() for table in reply for record in table.records])
 
             # Retrieve all points, separated depending on the tags
-            reply = cls.client.query_api().query(f'''
+            reply = cls._thread_local.client.query_api().query(f'''
             from(bucket: "{cls.database}")
             |> range(start: 0)
             |> filter(fn: (r) => r._measurement == "{measurement}")
@@ -298,7 +344,6 @@ class InfluxDb:
         res = []
 
         # Process each set of points as a separate InfluxPayload
-        influxPoint = None
         for points in pointsPerTagSet.values():
             payload = InfluxPayload(f'Remote_{measurement}')
             for tag in tags:
