@@ -1,0 +1,18 @@
+Version: 2
+Name: OpenTAP test
+Sequence:
+   - Order: 5
+     Task: Run.TapExecute
+     Config:
+       TestPlan: "/home/elcm/tapplans"
+       GatherResults: False
+       Externals:
+         Execution ID: "@{ExecutionId}"
+         Device ID: R5CR90LT7KV
+         Iterations: 3
+         Duration: 10
+         Ping Target: 10.11.23.220
+Standard: True
+Distributed: False
+Dashboard: {}
+KPIs: {}

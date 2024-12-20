@@ -1,0 +1,15 @@
+Version: 2
+Name: Helm Agent
+Sequence:
+  - Order: 1
+    Task: Run.HelmDeploy
+    Config:
+      Parameters: []
+      HelmChartPath: "/home/jj/helm/tutorial/helm-tutorial/nginx-chart"
+      Action: "Deploy"
+      ReleaseName: "nginx"
+      Namespace: "uma"
+      CWD: '.'
+Standard: True
+Distributed: False
+Dashboard: {}
