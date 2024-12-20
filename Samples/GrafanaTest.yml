@@ -5,7 +5,7 @@ Sequence:
     Task: Run.CsvToInflux
     Config:
      ExecutionId: "@{ExecutionId}"
-     CSV: "Sample/Results.csv"
+     CSV: "Samples/Results.csv"
      Measurement: DashboardTest1
      Delimiter: ;
 Standard: True

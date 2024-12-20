@@ -3,7 +3,7 @@ InfluxDbTest:
       Task: Run.CsvToInflux
       Config:
         ExecutionId: "@{ExecutionId}"
-        CSV: "Sample/Results.csv"  # Replace with the location of the file
+        CSV: "Samples/Results.csv"  # Replace with the location of the file
         Measurement: test01
         Delimiter: ;
 Standard: True
