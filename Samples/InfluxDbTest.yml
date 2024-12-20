@@ -1,0 +1,11 @@
+InfluxDbTest:
+    - Order: 5
+      Task: Run.CsvToInflux
+      Config:
+        ExecutionId: "@{ExecutionId}"
+        CSV: "Samples/Results.csv"  # Replace with the location of the file
+        Measurement: test01
+        Delimiter: ;
+Standard: True
+Distributed: False
+Dashboard: {}

@@ -1,0 +1,32 @@
+Version: 2
+Name: Grafana Test
+Sequence:
+  - Order: 1
+    Task: Run.CsvToInflux
+    Config:
+     ExecutionId: "@{ExecutionId}"
+     CSV: "Samples/Results.csv"
+     Measurement: DashboardTest1
+     Delimiter: ;
+Standard: True
+Dashboard:
+  - Name: "Jitter (ms)"
+    Measurement: "test30"
+    Field: "Jitter (ms)"
+    Type: Graph
+    Interval: 1s
+    Unit: ms
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
+  - Name: "Packet Loss (%)"
+    Measurement: "test30"
+    Field: "Packet Loss (%)"
+    Type: Graph
+    Interval: 1s
+    Unit: percent
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
