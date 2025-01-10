@@ -17,8 +17,8 @@ class TelegrafToInflux(ToInfluxBase):
             'Measurement': (None, True),    # Measurement name for InfluxDB, required
             'Stop': (None, True),           # Stop signal, required
             'Encryption': (False, True),    # Flag for SSL usage, required
-            'Certificates': (None, False),   # Path to SSL certificates, optional
-            'Port': (None,False)
+            'Certificates': (None, False),  # Path to SSL certificates, optional
+            'Port': (None,False)            # Port, optional 
         }
 
         self.executionId = self.params['ExecutionId']
