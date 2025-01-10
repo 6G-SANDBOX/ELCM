@@ -1,10 +1,11 @@
 import socket
 import ssl
 import json
-from Helper import utils, Level
+from Helper import utils, Level, influx
 import time
 import threading
 from .to_influx import ToInfluxBase
+
 class TelegrafToInflux(ToInfluxBase):
     
     def __init__(self, logMethod, parent, params):
@@ -16,12 +17,14 @@ class TelegrafToInflux(ToInfluxBase):
             'Measurement': (None, True),    # Measurement name for InfluxDB, required
             'Stop': (None, True),           # Stop signal, required
             'Encryption': (False, True),    # Flag for SSL usage, required
-            'Certificates': (None, False)   # Path to SSL certificates, optional
+            'Certificates': (None, False),   # Path to SSL certificates, optional
+            'Port': (None,False)
         }
 
         self.executionId = self.params['ExecutionId']
         self.use_ssl = self.params.get('Encryption', False)  # Check if SSL is to be used
         base_path = self.params.get('Certificates', "")
+        self.port=int(self.params.get('Port',8094))
 
         # Paths to SSL certificate files
         self.certfile = base_path + "server-cert.pem"
@@ -41,12 +44,19 @@ class TelegrafToInflux(ToInfluxBase):
                 flattened_data[key] = float(value)
             
         # Send the flattened data to InfluxDB
-        self._send_to_influx(measurement, flattened_data, timestamp, self.executionId)
+        try:
+            self._send_to_influx(measurement, flattened_data, timestamp, self.executionId)
+        except Exception as e:
+            if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                self.Log(Level.WARNING, f"Warning (TELEGRAF): Unprocessable entity (422). Invalid data: {data}")
+            else:
+                self.Log(Level.ERROR, f"Failed to send data to InfluxDB (TELEGRAF). Exception: {e}")
+                raise RuntimeError(f"Exiting due to unexpected error: {e}")
         
     # Method to handle incoming TCP connections
     def tcp_handler(self, stop_event):
         TCP_IP = '0.0.0.0'  # Listen on all available IP addresses
-        TCP_PORT = 8094     # Port for incoming TCP connections
+        TCP_PORT = self.port     # Port for incoming TCP connections
         BUFFER_SIZE = 4096  # Size of the buffer to receive data
         MAX_RETRY = 6       # Maximum number of retries for reconnections
         SOCKET_TIMEOUT = 10  # Timeout for socket operations in seconds
