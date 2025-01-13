@@ -17,12 +17,14 @@ class TelegrafToInflux(ToInfluxBase):
             'Measurement': (None, True),    # Measurement name for InfluxDB, required
             'Stop': (None, True),           # Stop signal, required
             'Encryption': (False, True),    # Flag for SSL usage, required
-            'Certificates': (None, False)   # Path to SSL certificates, optional
+            'Certificates': (None, False),  # Path to SSL certificates, optional
+            'Port': (None,False)            # Port, optional 
         }
 
         self.executionId = self.params['ExecutionId']
         self.use_ssl = self.params.get('Encryption', False)  # Check if SSL is to be used
         base_path = self.params.get('Certificates', "")
+        self.port=int(self.params.get('Port',8094))
 
         # Paths to SSL certificate files
         self.certfile = base_path + "server-cert.pem"
@@ -54,7 +56,7 @@ class TelegrafToInflux(ToInfluxBase):
     # Method to handle incoming TCP connections
     def tcp_handler(self, stop_event):
         TCP_IP = '0.0.0.0'  # Listen on all available IP addresses
-        TCP_PORT = 8094     # Port for incoming TCP connections
+        TCP_PORT = self.port     # Port for incoming TCP connections
         BUFFER_SIZE = 4096  # Size of the buffer to receive data
         MAX_RETRY = 6       # Maximum number of retries for reconnections
         SOCKET_TIMEOUT = 10  # Timeout for socket operations in seconds

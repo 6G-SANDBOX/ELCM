@@ -416,6 +416,7 @@ Sequence:
       Stop: "stop_flag"
       Encryption: True       # Set to True if TLS/SSL is used, False otherwise
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Port: "8094"           # Optional
 ```
 Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.TelegrafToInflux task. This ensures that the task terminates properly and stops retrieving data from Telegraf.
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
