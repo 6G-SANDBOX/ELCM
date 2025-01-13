@@ -1,9 +1,10 @@
 import paho.mqtt.client as mqtt
 import json
-from Helper import utils, Level
+from Helper import utils, Level, influx
 from Settings import MQTTConfig
 from .to_influx import ToInfluxBase
 import time
+
 class MqttToInflux(ToInfluxBase):
 
     def __init__(self, logMethod, parent, params):
@@ -37,9 +38,12 @@ class MqttToInflux(ToInfluxBase):
                 # Send the flattened data to InfluxDB
                 self._send_to_influx(measurement, measurement_data, timestamp, self.params['ExecutionId'])
             except Exception as e:
-                self.Log(Level.ERROR, f"Exception consuming MQTT messages: {e}")
-                self.SetVerdictOnError()
-                raise SystemExit("Terminating the program due to a critical error.")
+                if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                    self.Log(Level.WARNING, f"Warning (MQTT): Unprocessable entity (422). Invalid data: {data}")
+                else:
+                    self.Log(Level.ERROR, f"Failed to send data to InfluxDB (MQTT). Exception: {e}")
+                    self.SetVerdictOnError()
+                    raise RuntimeError(f"Exiting due to unexpected error: {e}")
 
     # Callback function when the client successfully connects to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
@@ -58,19 +62,20 @@ class MqttToInflux(ToInfluxBase):
         # Extract necessary parameters from the params dictionary
         mqtt_info = MQTTConfig()
         info = mqtt_info.user
-        user = info.get("User", None)
-        password = info.get("Password", None)
+        user = info.get("User", "")
+        password = info.get("Password", "")
         executionId = self.params['ExecutionId']
         broker = self.params['Broker']
         port = int(self.params['Port'])
         stop = self.params['Stop'] + "_" + str(executionId)
-        base_path = self.params['Certificates']
+        base_path = self.params.get('Certificates', "")
         encryption = self.params['Encryption']
         account = self.params['Account']
 
         # Configure TLS/SSL and authentication if required
         if not isinstance(encryption, bool) or not isinstance(account, bool):
             self.Log(Level.ERROR, "Exception creating MQTT: Invalid type for encryption or account")
+            self.SetVerdictOnError()
             return
 
         # Prepare MQTT client for connection based on encryption and account conditions

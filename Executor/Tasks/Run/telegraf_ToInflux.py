@@ -1,10 +1,11 @@
 import socket
 import ssl
 import json
-from Helper import utils, Level
+from Helper import utils, Level, influx
 import time
 import threading
 from .to_influx import ToInfluxBase
+
 class TelegrafToInflux(ToInfluxBase):
     
     def __init__(self, logMethod, parent, params):
@@ -41,7 +42,14 @@ class TelegrafToInflux(ToInfluxBase):
                 flattened_data[key] = float(value)
             
         # Send the flattened data to InfluxDB
-        self._send_to_influx(measurement, flattened_data, timestamp, self.executionId)
+        try:
+            self._send_to_influx(measurement, flattened_data, timestamp, self.executionId)
+        except Exception as e:
+            if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                self.Log(Level.WARNING, f"Warning (TELEGRAF): Unprocessable entity (422). Invalid data: {data}")
+            else:
+                self.Log(Level.ERROR, f"Failed to send data to InfluxDB (TELEGRAF). Exception: {e}")
+                raise RuntimeError(f"Exiting due to unexpected error: {e}")
         
     # Method to handle incoming TCP connections
     def tcp_handler(self, stop_event):

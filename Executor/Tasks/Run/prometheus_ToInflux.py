@@ -1,10 +1,12 @@
 from prometheus_api_client import PrometheusConnect
-from Helper import utils, Level
+from Helper import utils, Level, influx
 from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
 from Settings import PROMETHEUSConfig
 from .to_influx import ToInfluxBase
+import time
+
 class PrometheusToInflux(ToInfluxBase):
 
     def __init__(self, logMethod, parent, params):
@@ -58,6 +60,7 @@ class PrometheusToInflux(ToInfluxBase):
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
+                raise RuntimeError(f"Error executing range query '{query}': {e}")
 
     def process_custom_queries(self, prometheus, queries_custom, data_dict):
         for query in queries_custom:
@@ -68,6 +71,7 @@ class PrometheusToInflux(ToInfluxBase):
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
+                raise RuntimeError(f"Error executing custom query '{query}': {e}")
 
     def store_query_data(self, data, query, data_dict):
         for result in data:
@@ -90,9 +94,11 @@ class PrometheusToInflux(ToInfluxBase):
             try:
                 self._send_to_influx(measurement, flat_data, timestamp, executionId)
             except Exception as e:
-                self.Log(Level.ERROR, f"Error sending data to InfluxDB: {e}")
-                self.SetVerdictOnError()
-                return
+                if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                    self.Log(Level.WARNING, f"Warning (PROMETHEUS): Unprocessable entity (422). Invalid data: {data}")
+                else:
+                    self.Log(Level.ERROR, f"Failed to send data to InfluxDB (PROMETHEUS). Exception: {e}")
+                    raise RuntimeError(f"Exiting due to unexpected error: {e}")
 
     def Run(self):
         executionId = self.params['ExecutionId']
@@ -104,12 +110,12 @@ class PrometheusToInflux(ToInfluxBase):
         stop = self.params['Stop'] + "_" + str(executionId)
         step = self.params['Step']
         measurement = self.params['Measurement']
-        base_path = self.params['Certificates']
+        base_path = self.params.get('Certificates', "")
         encryption = self.params['Encryption']
         prometheus_info = PROMETHEUSConfig()
         info = prometheus_info.user
-        user = info.get("User", None)
-        password = info.get("Password", None)
+        user = info.get("User", "")
+        password = info.get("Password", "")
         account = self.params['Account']
 
         # Initialize the Prometheus session
@@ -117,6 +123,7 @@ class PrometheusToInflux(ToInfluxBase):
 
         if session is None:
             self.Log(Level.ERROR, "Failed to initialize Prometheus session")
+            self.SetVerdictOnError()
             return
 
         prometheus = PrometheusConnect(url=session['url'], session=session['session'])
@@ -125,23 +132,28 @@ class PrometheusToInflux(ToInfluxBase):
             self.Log(Level.ERROR, "Failed to connect to Prometheus")
             self.SetVerdictOnError()
             return
-
+         
+        self.Log(Level.INFO, f"Connected to Prometheus at {URL_host}:{PORT_host}")
+        
         while stop not in utils.task_list:
-            pass
+            time.sleep(1)
         utils.task_list.remove(stop)
         end_time = datetime.now()
 
         # Process both range and custom queries
         data_dict = {}
 
-        # Handle range queries if provided
-        if queries_range is not None:
-            self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
+        try:
+            # Handle range queries if provided
+            if queries_range is not None:
+                self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
 
-        # Handle custom queries if provided
-        if queries_custom is not None:
-            self.process_custom_queries(prometheus, queries_custom, data_dict)
+            # Handle custom queries if provided
+            if queries_custom is not None:
+                self.process_custom_queries(prometheus, queries_custom, data_dict)
 
-        # Send the data to InfluxDB if any queries were processed
-        if queries_range is not None or queries_custom is not None:
-            self.send_data_to_influx(data_dict, measurement, executionId)
+            # Send the data to InfluxDB if any queries were processed
+            if queries_range is not None or queries_custom is not None:
+                self.send_data_to_influx(data_dict, measurement, executionId)
+        except Exception:
+            self.SetVerdictOnError()

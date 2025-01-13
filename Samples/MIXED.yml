@@ -1,0 +1,81 @@
+Version: 2
+Name: MIXED
+Sequence:
+  - Order: 1
+    Task: Run.RestApi
+    Config:
+      Host: "api.ip2location.io"
+      Port: 443
+      Endpoint: "/?ip=8.8.8.8&format=json"
+      Https: True
+      Insecure: False
+      Method: "GET"
+      Payload: "{}"
+      PayloadMode: "Data"
+      Responses: "Success"
+      Timeout: 30
+      Headers: {}
+ 
+  - Order: 2
+    Task: Run.CliExecute
+    Config:
+      Parameters: "start microsoft-edge:https://wttr.in/Málaga"
+      CWD: "."
+ 
+  - Order: 3
+    Task: Run.CliSsh
+    Config:
+      Hostname: "192.168.x.x"
+      Port: 22
+      Username: "user"
+      Certificate: "C:/elcm/Certificates/ssh/id_rsa"
+      Command: "ipconfig"
+ 
+  - Order: 4
+    Task: Run.Publish
+    Config: { ExecutionId: "@{ExecutionId}", Broker: "192.168.x.x", Port: "1885", Topic: "mi/topic/elcm", Measurement: "MQTT", Stop: "stop_mqtt", Account: False, Encryption: False }
+ 
+  - Order: 5
+    Task: Run.Message
+    Config: { Severity: INFO, Message: "1: @[ExecutionId]; 2: @[Publish.Broker]; 3: @[Publish.Topic]; 4: @[Publish.Measurement]; 5: @[Publish.Port]; 6: @[Publish.Account]; 7: @[Publish.Encryption]; 8: @[Publish.Stop]" }
+ 
+  - Order: 6
+    Task: Flow.Parallel
+    Children:
+      - Task: Run.MqttToInflux
+        Config:
+          ExecutionId: "@[ExecutionId]"
+          Broker: "@[Broker]"
+          Port: "@[Port]"
+          Account: False
+          Topic: "@[Topic]"
+          Stop: "@[Stop]"
+          Measurement: "@[Measurement]"
+          Encryption: False
+      - Task: Flow.Sequence
+        Children:
+        - Task: Run.Delay
+          Config:
+            Time: 60
+        - Task: Run.StopTask
+          Config:
+            ExecutionId: "@{ExecutionId}"
+            Name: "stop_mqtt"
+  - Order: 7
+    Task: Run.EmailNotification
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      Email: "email@example.com"
+ 
+Standard: True
+Dashboard:
+  - Name: "Temperature_MQTT"
+    Measurement: "MQTT"
+    Field: "temperatura"
+    Type: Graph
+    Interval: 1s
+    Unit: celsius
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False

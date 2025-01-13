@@ -1,6 +1,6 @@
 from prometheus_api_client import PrometheusConnect
 from .to_influx import ToInfluxBase
-from Helper import utils, Level
+from Helper import utils, Level, influx
 from datetime import datetime
 import requests
 import re
@@ -72,9 +72,11 @@ class AthonetToInflux(ToInfluxBase):
             try:
                 self._send_to_influx(measurement, data, timestamp, executionId)
             except Exception as e:
-                self.Log(Level.ERROR, f"Error sending data to InfluxDB: {e}")
-                self.SetVerdictOnError()
-                return
+                if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                    self.Log(Level.WARNING, f"Warning (ATHONET): Unprocessable entity (422). Invalid data: {data}")
+                else:
+                    self.Log(Level.ERROR, f"Failed to send data to InfluxDB (ATHONET). Exception: {e}")
+                    raise RuntimeError(f"Exiting due to unexpected error: {e}")
 
     def store_query_data(self, data, query, data_dict):
         for result in data:
@@ -172,7 +174,6 @@ class AthonetToInflux(ToInfluxBase):
 
         while stop not in utils.task_list:
             time.sleep(1)
-            pass
         utils.task_list.remove(stop)
         end_time = datetime.now()
 
@@ -200,5 +201,5 @@ class AthonetToInflux(ToInfluxBase):
             if data_dict:
                 self.send_data_to_influx(data_dict, measurement, executionId)
 
-        except Exception as e:
-            self.Log(Level.ERROR, f"Unexpected error during Run: {e}")
+        except Exception:
+            self.SetVerdictOnError()
