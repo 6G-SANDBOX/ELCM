@@ -120,7 +120,6 @@ class AthonetToInflux(ToInfluxBase):
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
-                prometheus=None
                 self.Log(Level.WARNING, "Try to reconnect.")
                 prometheus = self.reauthenticate_and_get_prometheus()
                 if not prometheus:
@@ -138,7 +137,6 @@ class AthonetToInflux(ToInfluxBase):
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
-                prometheus=None
                 self.Log(Level.WARNING, "Try to reconnect.")
                 prometheus = self.reauthenticate_and_get_prometheus()
                 if not prometheus:
@@ -194,6 +192,7 @@ class AthonetToInflux(ToInfluxBase):
         self.Log(Level.INFO, "Connected to Prometheus")
 
         try:
+            time.sleep(10)
             if queries_range:
                 self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
 
