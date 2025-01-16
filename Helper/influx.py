@@ -12,6 +12,7 @@ from os.path import abspath
 import re
 import requests
 import enum
+from Helper import Log
 
 class BatchingCallback(object):
 
@@ -152,9 +153,9 @@ class InfluxDb:
         if hasattr(cls._thread_local, 'client'):
             try:
                 cls._thread_local.client.close()
-                print("InfluxDB client closed successfully for the thread.", flush=True)
+                Log.I(f"InfluxDB client closed successfully for the thread.")
             except Exception as e:
-                print(f"Error closing InfluxDB client: {e}", flush=True)
+                Log.I(f"Error closing InfluxDB client: {e}.")
             finally:
                 del cls._thread_local.client
 
@@ -194,9 +195,8 @@ class InfluxDb:
                     callback.last_error = None
                     raise InfluxDBError(tmp.response)
             except Exception as e:
-                print(f"Error sending payload: {e}", flush=True)
                 cls.cleanup()
-                raise
+                raise RuntimeError(f"Error sending payload: {e}")
 
     @classmethod
     def PayloadToCsv(cls, payload: InfluxPayload, outputFile: str):
