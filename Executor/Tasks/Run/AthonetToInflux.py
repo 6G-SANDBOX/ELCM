@@ -192,7 +192,7 @@ class AthonetToInflux(ToInfluxBase):
         self.Log(Level.INFO, "Connected to Prometheus")
 
         try:
-            time.sleep(10)
+            
             if queries_range:
                 self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
 
