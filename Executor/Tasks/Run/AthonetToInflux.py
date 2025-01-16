@@ -1,6 +1,6 @@
 from prometheus_api_client import PrometheusConnect
 from .to_influx import ToInfluxBase
-from Helper import utils, Level
+from Helper import utils, Level, influx
 from datetime import datetime
 import requests
 import re
@@ -56,7 +56,6 @@ class AthonetToInflux(ToInfluxBase):
             self.access_token = None
 
     def reauthenticate_and_get_prometheus(self):
-        self.Log(Level.WARNING, "Token expired. Attempting re-authentication.")
         url, session = self.init_prometheus_session()
         if session:
             prometheus = PrometheusConnect(url=url, session=session)
@@ -72,9 +71,11 @@ class AthonetToInflux(ToInfluxBase):
             try:
                 self._send_to_influx(measurement, data, timestamp, executionId)
             except Exception as e:
-                self.Log(Level.ERROR, f"Error sending data to InfluxDB: {e}")
-                self.SetVerdictOnError()
-                return
+                if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                    self.Log(Level.WARNING, f"Warning (ATHONET): Unprocessable entity (422). Invalid data: {data}")
+                else:
+                    self.Log(Level.ERROR, f"Failed to send data to InfluxDB (ATHONET). Exception: {e}")
+                    raise RuntimeError(f"Exiting due to unexpected error: {e}")
 
     def store_query_data(self, data, query, data_dict):
         for result in data:
@@ -119,11 +120,11 @@ class AthonetToInflux(ToInfluxBase):
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
-                if not prometheus.check_prometheus_connection():
-                    prometheus = self.reauthenticate_and_get_prometheus()
-                    if not prometheus:
-                        self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
-                        return
+                self.Log(Level.WARNING, "Try to reconnect.")
+                prometheus = self.reauthenticate_and_get_prometheus()
+                if not prometheus:
+                    self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
+                    return
                 self.Log(Level.WARNING, f"Retrying remaining queries from '{query}'.")
                 self.process_range_queries(prometheus, queries_range[i:], start_time, end_time, step, data_dict)
 
@@ -136,11 +137,11 @@ class AthonetToInflux(ToInfluxBase):
                     self.store_query_data(data, query, data_dict)
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
-                if not prometheus.check_prometheus_connection():
-                    prometheus = self.reauthenticate_and_get_prometheus()
-                    if not prometheus:
-                        self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
-                        return
+                self.Log(Level.WARNING, "Try to reconnect.")
+                prometheus = self.reauthenticate_and_get_prometheus()
+                if not prometheus:
+                    self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
+                    return
                 self.Log(Level.WARNING, f"Retrying remaining queries from '{query}'.")
                 self.process_custom_queries(prometheus, queries_custom[i:], data_dict)
 
@@ -150,7 +151,7 @@ class AthonetToInflux(ToInfluxBase):
 
         if not self.access_token:
             self.Log(Level.ERROR, "Failed to obtain access token for Prometheus queries.")
-            return None
+            return None, None
 
         try:
             session = requests.Session()
@@ -172,7 +173,6 @@ class AthonetToInflux(ToInfluxBase):
 
         while stop not in utils.task_list:
             time.sleep(1)
-            pass
         utils.task_list.remove(stop)
         end_time = datetime.now()
 
@@ -189,8 +189,10 @@ class AthonetToInflux(ToInfluxBase):
             self.Log(Level.ERROR, "Failed to connect to Prometheus")
             self.SetVerdictOnError()
             return
+        self.Log(Level.INFO, "Connected to Prometheus")
 
         try:
+            
             if queries_range:
                 self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
 
@@ -200,5 +202,5 @@ class AthonetToInflux(ToInfluxBase):
             if data_dict:
                 self.send_data_to_influx(data_dict, measurement, executionId)
 
-        except Exception as e:
-            self.Log(Level.ERROR, f"Unexpected error during Run: {e}")
+        except Exception:
+            self.SetVerdictOnError()

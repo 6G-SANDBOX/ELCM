@@ -1,0 +1,67 @@
+Version: 2
+Name: ATHONET
+Sequence:
+  - Order: 1
+    Task: Flow.Parallel
+    Children:
+      - Task: Run.AthonetToInflux
+        Config:
+          ExecutionId: "@{ExecutionId}"
+          AthonetLoginUrl: "https://x.x.x.x/core/pls/api/1/auth/login"
+          AthonetQueryUrl: "https://x.x.x.x/core/prometheus"
+          QueriesRange:
+            - amf_n5gs_msg_rcv_total
+            - amf_n5gs_msg_snt_total
+            - node_boot_time_seconds
+          Measurement: ATHONET
+          Step: "1s"
+          Stop: "stop_ATHONET"
+          Username: "user"
+          Password: "password"
+      - Task: Flow.Sequence
+        Children:
+        - Task: Run.Delay
+          Config:
+            Time: 20
+        - Task: Run.StopTask
+          Config:
+            ExecutionId: "@{ExecutionId}"
+            Name: "stop_ATHONET"
+Standard: True
+Dashboard:
+  - Name: "amf_n5gs_msg_rcv_total_Deregistration_request__UE_originating"
+    Measurement: "ATHONET"
+    Field: "amf_n5gs_msg_rcv_total_Deregistration_request__UE_originating"
+    Type: Graph
+    Interval: 1s
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
+  - Name: "amf_n5gs_msg_rcv_total_UL_NAS_transport"
+    Measurement: "ATHONET"
+    Field: "amf_n5gs_msg_rcv_total_UL_NAS_transport"
+    Type: Graph
+    Interval: 1s
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
+  - Name: "amf_n5gs_msg_snt_total_Service_accept"
+    Measurement: "ATHONET"
+    Field: "amf_n5gs_msg_snt_total_Service_accept"
+    Type: Graph
+    Interval: 1s
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False   
+  - Name: "node_boot_time_seconds"
+    Measurement: "ATHONET"
+    Field: "node_boot_time_seconds"
+    Type: Graph
+    Interval: 1s
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False

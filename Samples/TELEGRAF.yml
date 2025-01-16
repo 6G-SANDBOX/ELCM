@@ -1,0 +1,33 @@
+Version: 2
+Name: TELEGRAF
+Sequence:
+  - Order: 1
+    Task: Flow.Parallel
+    Children:
+      - Task: Run.TelegrafToInflux
+        Config:
+          ExecutionId: "@{ExecutionId}"
+          Measurement: Telegraf
+          Stop: "stop_telegraf" 
+          Encryption: False 
+      - Task: Flow.Sequence
+        Children:
+        - Task: Run.Delay
+          Config:
+            Time: 60
+        - Task: Run.StopTask
+          Config:
+            ExecutionId: "@{ExecutionId}"
+            Name: "stop_telegraf"
+Standard: True
+Dashboard:
+  - Name: "MEM_USED"
+    Measurement: "Telegraf"
+    Field: "used_mem"
+    Type: Graph
+    Interval: 1s
+    Unit: bytes
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
