@@ -20,6 +20,7 @@ class EmailFiles(Task):
         }
 
     def Run(self):
+        
         executionId = self.params['ExecutionId']
         email_info = EmailConfig()
         info = email_info.user
@@ -27,8 +28,25 @@ class EmailFiles(Task):
         email_password = info.get("Password", None)
         email_port = int(info.get("Port", None))
         email_server = info.get("Server", None)
-        email = self.params['Email'] 
-        directory_path = self.params['DirectoryPath']  # Directory containing the files to process
+        email = self.params.get("Email", None) 
+        directory_path = self.params.get("DirectoryPath",None)  # Directory containing the files to process
+        
+        # Check for missing configuration or parameters
+        missing_params = []
+        if email_user is None:
+            missing_params.append("email_user")
+        if email_password is None:
+            missing_params.append("email_password")
+        if email_port is None:
+            missing_params.append("email_port")
+        if email_server is None:
+            missing_params.append("email_server")
+        if directory_path is None:
+            missing_params.append("directory_path")
+        # Return error if any parameter is missing
+        if missing_params:
+            return f"Missing parameters: {', '.join(missing_params)}"
+         
         zip_file_path = os.path.join(directory_path, f"zip_{executionId}.zip")  # Define the path of the final ZIP file
 
         # Filter and collect files containing the ExecutionId in their name
