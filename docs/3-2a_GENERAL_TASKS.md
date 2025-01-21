@@ -518,7 +518,6 @@ Sequence:
     Config:
       ExecutionId: "@{ExecutionId}"                      # Unique execution ID
       Measurement: "KAFKA"                   # The InfluxDB measurement to export
-      Bucket: "my_bucket"                        # (v2.x only) The InfluxDB bucket for v2.x
 ```
 
 ## Run.EmailFiles
