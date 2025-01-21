@@ -506,7 +506,6 @@ This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV 
 **Configuration Parameters**:
 - `ExecutionId` (required): The unique identifier for the execution, used to filter data.
 - `Measurement` (required): The InfluxDB measurement to export.
-- `Bucket` (optional, v2 only): The bucket in InfluxDB v2 where the data is stored.
 
 **YAML Configuration Example**:
 ```yaml
