@@ -1,6 +1,6 @@
 import subprocess
 from Task import Task
-from Helper import Level
+from Helper import Level, influx
 from Settings import Config
 import os
 
@@ -11,8 +11,7 @@ class InfluxToCsv(Task):
         # Define required and optional parameters for both InfluxDB v1 and v2
         self.paramRules = {
             'ExecutionId': (None, True),     
-            'Measurement': (None, True),     # Required: InfluxDB measurement to export
-            'Bucket': (None, False),         # Required for v2: InfluxDB v2 bucket name
+            'Measurement': (None, True)     # Required: InfluxDB measurement to export
         }
 
     def export_influxdb_v1(self, influx_dir, database, measurement, execution_id, url, user, password):
@@ -53,13 +52,13 @@ class InfluxToCsv(Task):
             self.Log(Level.ERROR, f"Error exporting data from InfluxDB v2.x: {e}")
 
     def Run(self):
-        from Helper import InfluxDb
+
         config=Config()
         
         url = f"http://{config.InfluxDb.Host}:{config.InfluxDb.Port}"
-        version = InfluxDb.detectInfluxDBVersion(url)  # Get the detected version
+        version = influx.InfluxDb.detectInfluxDBVersion(url)  # Get the detected version
         execution_id = self.params.get('ExecutionId')
-        influx_dir = "C:/elcm/Csv/" if os.name == 'nt' else "/elcm/Csv/"
+        influx_dir = "C:/elcm/CSV/" if os.name == 'nt' else "/elcm/CSV/"
         measurement = self.params.get('Measurement')
 
         try:
@@ -78,13 +77,9 @@ class InfluxToCsv(Task):
             'url': url  # Pass the URL to the export methods
         }
 
-        if version == 'v1':
+        if version == influx.Versions.V1:
             self.export_influxdb_v1(**common_args, database=config.InfluxDb.Database,user=config.InfluxDb.User,password=config.InfluxDb.Password)
-        elif version == 'v2':
-            bucket=self.params.get('Bucket', None)
-            if bucket is None:
-                self.Log(Level.ERROR, f"No bucket")
-                return
-            self.export_influxdb_v2(**common_args, bucket=bucket, token=config.InfluxDb.Token, org=config.InfluxDb.Org)
+        elif version == influx.Versions.V2:
+            self.export_influxdb_v2(**common_args, bucket=config.InfluxDb.Database, token=config.InfluxDb.Token, org=config.InfluxDb.Org)
         else:
             self.Log(Level.ERROR, "Invalid InfluxDB version. Must be '1' or '2'.")
