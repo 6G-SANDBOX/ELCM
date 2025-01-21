@@ -42,6 +42,7 @@ class Executor(ExecutorBase):
                 self.AddMessage(f"Task '{identifier}' finished with verdict '{taskInstance.Verdict.name}'",
                                 int(floor(10 + ((i / len(tasks)) * 90))))
             except Exception as e:
+                self.Log(Level.ERROR, str(e))
                 self.Status = Status.Errored
                 self.Verdict = Verdict.Error
                 break

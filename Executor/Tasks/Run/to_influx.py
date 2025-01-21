@@ -12,12 +12,6 @@ class ToInfluxBase(Task):
         if isinstance(value, str):
             
             try:
-                return int(value)
-            except ValueError:
-                pass
-
-            
-            try:
                 return float(value)
             except ValueError:
                 pass
@@ -25,7 +19,11 @@ class ToInfluxBase(Task):
             
             lower_value = value.lower()
             if lower_value in {'true', 'false'}:
-                return lower_value
+                
+                if lower_value=='true':
+                    return True
+                else:
+                    return False
 
             
             return value

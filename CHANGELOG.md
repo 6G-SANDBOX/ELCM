@@ -1,3 +1,21 @@
+**05/12/2024** [Version 3.7.1]
+ - Avoid exception on start when using Python 3.12
+
+**08/11/2024** [Version 3.7.0]
+ - Removed Dispatcher dependency.
+   - Updated distributed experiment execution accordingly.
+ - Added support for InfluxDb V2.x databases.
+   - Support generation of Grafana dashboards that target InfluxDb V2 databases.
+ - New tasks included:
+   - HELM deploy
+   - Kafka consumer to InfluxDb
+   - MQTT to InfluxDb
+   - Prometheus to InfluxDb
+   - Telegraf to InfluxDb
+   - eMail Notification
+   - CLI SSH
+ - Bug fixes
+
 **28/09/2023** [Version 3.6.3]
  - Re-enable original endpoints (deprecated) to retain compatibility with Portal
 

@@ -1,8 +1,9 @@
 from kafka import KafkaConsumer
 import json
-from Helper import utils, Level
+from Helper import utils, Level, influx
 from Settings import KAFKAConfig
 from .to_influx import ToInfluxBase
+
 class KafkaConsummerToInflux(ToInfluxBase):
     # Initialize the Task superclass with necessary parameters
     def __init__(self, logMethod, parent, params):
@@ -25,8 +26,8 @@ class KafkaConsummerToInflux(ToInfluxBase):
         # Extract necessary parameters from the params dictionary
         kafka = KAFKAConfig()
         info = kafka.user
-        user = info.get("User", None)
-        password = info.get("Password", None)
+        user = info.get("User", "")
+        password = info.get("Password", "")
         executionId = self.params['ExecutionId']
         measurement = self.params["Measurement"]
         IP_host = self.params['Ip']
@@ -34,7 +35,7 @@ class KafkaConsummerToInflux(ToInfluxBase):
         TOPIC_Host = self.params['Topic']
         stop = self.params['Stop'] + "_" + str(executionId)
         group_id_opt = self.params['GroupId']
-        base_path = self.params['Certificates']
+        base_path = self.params.get('Certificates', "")
         encryption = self.params['Encryption']
         account = self.params['Account']
 
@@ -51,6 +52,7 @@ class KafkaConsummerToInflux(ToInfluxBase):
             # Check if encryption and account are boolean values
             if not isinstance(encryption, bool) or not isinstance(account, bool):
                 self.Log(Level.ERROR, "Exception creating KAFKA: Invalid type for encryption or account")
+                self.SetVerdictOnError()
                 return
 
             # Determine the security protocol and additional arguments based on conditions
@@ -88,15 +90,16 @@ class KafkaConsummerToInflux(ToInfluxBase):
                     data = message.value
                     flattened_data = self._flatten_json(data)
                     for key, value, timestamp in flattened_data:
-                        # Convert integer values to float
-                        if isinstance(value, int):
-                            value = float(value)
                         measurement_data = {key: value}
                         # Send the flattened data to InfluxDB
                         self._send_to_influx(measurement, measurement_data, timestamp, executionId)
                     break
                 except Exception as e:
-                    self.Log(Level.ERROR, f"Exception consuming KAFKA messages: {e}")
-                    self.SetVerdictOnError()
-                    return
+                    if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                        self.Log(Level.WARNING, f"Warning (KAFKA): Unprocessable entity (422). Invalid data: {data}")
+                    else:
+                        self.Log(Level.ERROR, f"Failed to send data to InfluxDB (KAFKA). Exception: {e}")
+                        self.SetVerdictOnError()
+                        raise RuntimeError(f"Exiting due to unexpected error: {e}")
+                
         utils.task_list.remove(stop)

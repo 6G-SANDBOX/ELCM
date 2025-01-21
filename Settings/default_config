@@ -33,6 +33,8 @@ InfluxDb:
   User:
   Password:
   Database:
+  Token:
+  Org:
 Metadata:
   HostIp: "127.0.0.1"
   Facility:

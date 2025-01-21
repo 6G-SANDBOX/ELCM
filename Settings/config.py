@@ -139,14 +139,36 @@ class SliceManager(restApi):
 
 class InfluxDb(enabledLoginRestApi):
     def __init__(self, data: Dict):
-        defaults = {
-            'Database': (None, Level.ERROR),
-        }
-        super().__init__(data, 'InfluxDb', defaults)
+        if 'Token' in data.keys() and 'Org' in data.keys():
+            defaults = {
+                'Database': (None, Level.ERROR),
+                'Token': (None, Level.WARNING),
+                'Org': (None, Level.WARNING)
+            }
+            super().__init__(data, 'InfluxDb V2', defaults)
+        else:
+            defaults = {
+                'Database': (None, Level.ERROR),
+            }
+            super().__init__(data, 'InfluxDb V1', defaults)
 
     @property
     def Database(self):
         return self._keyOrDefault('Database')
+
+    @property
+    def Token(self):
+        return self._keyOrDefault('Token')
+
+    @property
+    def Org(self):
+        return self._keyOrDefault('Org')
+
+    @property
+    def Validation(self) -> List[Tuple['Level', str]]:
+        if self.Token is not None and self.Org is None:
+            return [(Level.ERROR, "For InfluxDB v2+ the Org field is mandatory")]
+        return super().Validation
 
 
 class Logging(validable):
@@ -276,6 +298,6 @@ class Config(ConfigBase):
                       self.Grafana, self.InfluxDb, self.Metadata, self.EastWest, ]:
             Config.Validation.extend(entry.Validation)
             keys.discard(entry.section)
-
+        keys.discard(self.InfluxDb.section.split(' ')[0])  # Necessary since several versions of InfluxDb are supported.
         if len(keys) != 0:
             Config.Validation.append((Level.WARNING, f"Unrecognized keys found: {(', '.join(keys))}"))

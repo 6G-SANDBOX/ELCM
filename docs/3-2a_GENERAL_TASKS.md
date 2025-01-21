@@ -238,6 +238,7 @@ This task uses encryption to secure the connection:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: KAFKA
 Sequence:
   - Order: 1
@@ -255,6 +256,9 @@ Sequence:
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 
 ```
+
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.KafkaConsummerToInflux task. This ensures that the task terminates properly and stops retrieving data from Kakfa. 
+
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 ## Run.MqttToInflux
 
@@ -290,6 +294,7 @@ This task uses encryption to secure the MQTT connection:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: MQTT
 Sequence:
   - Order: 1
@@ -305,6 +310,8 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.MqttToInflux task. This ensures that the task terminates properly and stops retrieving data from MQTT.
+
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.PrometheusToInflux
@@ -345,6 +352,7 @@ This task uses encryption to secure the connection:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: PROMETHEUS
 Sequence:
   - Order: 1
@@ -366,6 +374,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.PrometheusToInflux task. This ensures that the task terminates properly and stops retrieving data from Prometheus.
 
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
@@ -397,6 +406,7 @@ If SSL/TLS encryption is enabled:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: TELEGRAF
 Sequence:
   - Order: 1
@@ -406,7 +416,9 @@ Sequence:
       Stop: "stop_flag"
       Encryption: True       # Set to True if TLS/SSL is used, False otherwise
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
+      Port: "8094"           # Optional
 ```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.TelegrafToInflux task. This ensures that the task terminates properly and stops retrieving data from Telegraf.
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.EmailNotification
@@ -435,6 +447,7 @@ The task uses SMTP for sending the email:
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: EMAIL
 Sequence:
   - Order: 1
@@ -460,6 +473,7 @@ This task sends a stop signal by putting a specific message into a control queue
 **YAML Configuration Example**:
 
 ```yaml
+Version: 2
 Name: STOP_TASK
 Sequence:
   - Order: 1
@@ -553,3 +567,100 @@ Sequence:
       Email: "email@example.com"             # Receiver email address
       DirectoryPath: "/path/to/files"            # Directory containing files to be compressed
 ```
+## Run.CliSsh
+
+**Description**:
+
+The `CliSsh` task establishes an SSH connection to a remote server, executes a specified command, and logs the output or any errors encountered during execution. It supports multiple types of private key authentication, including RSA, ECDSA, and Ed25519.
+
+**How It Works**:
+1. **Initialization**: 
+   - Defines a set of required and optional parameters needed to configure the SSH connection, such as hostname, port, username, private key path, and the command to execute.
+   
+2. **SSH Connection**: 
+   - The client connects to the specified SSH server using the provided hostname and port, and it accepts various private key types (RSA, ECDSA, Ed25519) for authentication.
+   
+3. **Command Execution**:
+   - Once connected, the provided command is executed on the remote server.
+   - Captures the standard output and error output streams from the executed command.
+
+**Configuration Parameters**:
+- `Hostname` (required): The hostname or IP address of the SSH server.
+- `Port` (optional): The SSH port (default is 22).
+- `Username` (required): The username for the SSH connection.
+- `Certificate` (required): Path to the private key file used for authentication (supports RSA, ECDSA, and Ed25519).
+- `Command` (required): The command to execute on the remote server.
+
+**YAML Configuration Example**
+```yaml
+Version: 2
+Name: CLI_SSH
+Sequence:
+  - Order: 1
+    Task: Run.CliSsh
+    Config:
+      Hostname: "192.168.1.100"               # IP address or hostname of the SSH server
+      Port: 22                                # SSH port (default is 22)
+      Username: "user"                        # Username for the SSH connection
+      Certificate: "/path/to/private_key"     # Path to the private key for authentication
+      Command: "ifconfig"                     # Command to execute on the remote server
+```
+## Run.AthonetToInflux
+
+**Description**:
+
+The `AthonetToInflux` task fetches monitoring data from an Athonet system using Prometheus queries and sends the processed data to an InfluxDB instance. It handles token-based authentication, range-based and custom Prometheus queries, and efficient data mapping for InfluxDB insertion.
+
+**How It Works**:
+1. **Initialization**:
+   - The task is configured with required parameters for authentication, Prometheus query execution, and InfluxDB data insertion.
+   - Parameters include Athonet URLs, authentication credentials, query details, and execution configurations.
+
+2. **Authentication**:
+   - Authenticates to the Athonet system using the provided username and password, retrieving an access token required for subsequent Prometheus queries.
+
+3. **Prometheus Query Execution**:
+   - Supports both range-based and custom Prometheus queries to fetch monitoring data.
+   - Handles token expiration by automatically re-authenticating when necessary.
+
+4. **Data Processing**:
+   - Processes the retrieved Prometheus data, sanitizes metric names, and organizes the data into a dictionary for InfluxDB insertion.
+
+5. **Data Insertion into InfluxDB**:
+   - Sends the processed data to an InfluxDB instance with proper timestamp mapping, measurement configuration, and execution context.
+
+**Configuration Parameters**:
+- `ExecutionId` (required): Unique identifier for the execution instance.
+- `QueriesRange` (optional): List of Prometheus range queries to execute.
+- `QueriesCustom` (optional): List of custom Prometheus queries to execute.
+- `Measurement` (required): The InfluxDB measurement name where data will be stored.
+- `Stop` (required): A stop condition identifier, ensuring the task terminates upon specific criteria.
+- `Step` (required): Time step for Prometheus range queries.
+- `Username` (required): Athonet authentication username.
+- `Password` (required): Athonet authentication password.
+- `AthonetLoginUrl` (required): URL for Athonet authentication.
+- `AthonetQueryUrl` (required): URL for Prometheus queries on the Athonet system.
+
+**YAML Configuration Example**:
+```yaml
+Version: 2
+Name: ATHONET_TO_INFLUX
+Sequence:
+  - Order: 1
+    Task: Run.AthonetToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"                    # Unique execution identifier
+      QueriesRange: 
+        - "query1"           # Prometheus range query
+        - "query2"           # Another Prometheus range query
+      QueriesCustom:
+        - "query3"           # Custom Prometheus query
+      Measurement: "athonet_metrics"         # InfluxDB measurement name
+      Stop: "stop_athonet"           # Stop condition identifier
+      Step: "1s"                            # Time step for range queries
+      Username: "admin"                      # Athonet username
+      Password: "password"                   # Athonet password
+      AthonetLoginUrl: "https://athonet.example.com/core/login" # Athonet login URL
+      AthonetQueryUrl: "https://athonet.example.com/core/prometheus"   # Athonet Prometheus query URL
+```
+Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.

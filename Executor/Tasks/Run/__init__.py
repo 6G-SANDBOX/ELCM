@@ -23,3 +23,5 @@ from .telegraf_ToInflux import TelegrafToInflux
 from .helm_deploy import HelmDeploy
 from .EmailFiles import EmailFiles
 from .InfluxToCsv import InfluxToCsv
+from .cli_ssh import CliSsh
+from .AthonetToInflux import AthonetToInflux

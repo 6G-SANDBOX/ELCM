@@ -1,0 +1,59 @@
+Version: 2
+# To use, it is necessary to install plink
+Name: REMOTEPINGSSHTOCSVRETURNANDUPLOAD
+Sequence:
+  - Order: 20
+    Task: Run.CliExecute
+    Config:
+      #Parameters
+      Parameters: plink -ssh 10.11.xx.xxx -l user -pw pass -batch -t "sh pingm.sh 8.8.8.8 TESTTEST"
+      #Parameters: 'echo'
+      CWD: C:/ELCM/Experiment
+  - Order: 21
+    Task: Run.CliExecute
+    Config:
+      Parameters: plink -ssh 10.11.xx.xxx -l user -pw pass -batch -t "cat TESTTEST_ping.csv" > TESTTESTping.csv
+      #Parameters: 'echo'
+      CWD: C:/ELCM/Experiment
+  - Order: 30
+    Task: Run.CsvToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      CSV: "C:/ELCM/Experiment/TESTTESTping.csv"  # Replace with the location of the file
+      Measurement: ADB_Ping_Agent
+      Delimiter: ','     
+      Timestamp: 'Timestamp'
+      Convert: True
+      
+Standard: True
+Distributed: False
+Dashboard:
+  - Name: "Remote ping ssh to csv"
+    Measurement: "ADB_Ping_Agent"
+    Field: "Time(ms)"
+    Unit: "ms"
+    Type: Graph
+    Interval: 1s
+    Order: ASC
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
+KPIs:
+  ADB_iPerf_Agent_Client_T:
+    - Name: Throughput (Mbps)
+      Type: Platform
+      Description: "The amount of material or items passing through a system or process."
+    - Name: Jitter (ms)
+      Type: Platform
+      Description: "Slight irregular movement, variation, or unsteadiness, especially in an electrical signal or electronic device."
+  ADB_Ping_Agent:
+    - Name: Delay (ms)
+      Type: Platform
+      Description: "A period of time by which something is late or postponed."
+  ADB_Resource_Agent_T:
+    - Name: Used RAM (%)
+      Type: Platform
+      Description: "Amount of memory currently storing useful data."
+
+
