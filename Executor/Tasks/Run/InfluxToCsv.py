@@ -36,13 +36,12 @@ class InfluxToCsv(Task):
             f'|> filter(fn: (r) => r["_measurement"] == "{measurement}" and r["ExecutionId"] == "{execution_id}")'
         )
         
-        # Format the curl command
         command = [
             "curl", "-X", "POST", f"{url}/api/v2/query?org={org}",
             "-H", f"Authorization: Token {token}",
             "-H", "Content-Type: application/vnd.flux",
             "--data", flux_query,
-            "--output", output_file  # Save output directly to the file
+            "--output", output_file
         ]
 
         try:
@@ -74,7 +73,7 @@ class InfluxToCsv(Task):
             'influx_dir': influx_dir,
             'measurement': measurement,
             'execution_id': execution_id,
-            'url': url  # Pass the URL to the export methods
+            'url': url
         }
 
         if version == influx.Versions.V1:
