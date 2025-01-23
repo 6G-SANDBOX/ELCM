@@ -34,7 +34,7 @@ class ScenarioLoader(TestCaseLoader):
         keys = list(data.keys())
 
         if len(keys) > 1:
-            validation.append((Level.ERROR, f'Multiple Scenarios defined on a single file: {list(keys)}'))
+            validation.append((Level.WARNING, f'Multiple Scenarios defined on a single file: {list(keys)}'))
 
         for key in keys:
             cls.scenarios[key], v = cls.GetActionList(data[key])
