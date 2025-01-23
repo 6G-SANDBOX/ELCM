@@ -45,7 +45,8 @@ class EmailFiles(Task):
             missing_params.append("directory_path")
         # Return error if any parameter is missing
         if missing_params:
-            return f"Missing parameters: {', '.join(missing_params)}"
+            self.Log(Level.ERROR, f'Missing parameters: {', '.join(missing_params)}')
+            return 
          
         zip_file_path = os.path.join(directory_path, f"zip_{executionId}.zip")  # Define the path of the final ZIP file
 
