@@ -13,6 +13,7 @@ import re
 import requests
 import enum
 from Helper import Log
+import os
 
 class BatchingCallback(object):
 
@@ -365,3 +366,47 @@ class InfluxDb:
             res.append(payload)
 
         return res
+    def export_influxdb_v1(influx_dir, database, measurement, execution_id, url, user, password):
+        output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
+
+        query_params = {
+            "db": database,
+            "q": f'SELECT * FROM "{measurement}" WHERE "ExecutionId" = \'{execution_id}\''
+        }
+        headers = {"Accept": "application/csv"}
+
+        try:
+            response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
+            response.raise_for_status()
+
+            with open(output_file, "w") as f:
+                f.write(response.text)
+
+            Log.I(f"Data successfully exported to {output_file} from InfluxDB v1.x")
+        except requests.exceptions.RequestException as e:
+            Log.I(f"Error exporting data from InfluxDB v1.x: {e}")
+
+    def export_influxdb_v2(influx_dir, bucket, measurement, token, org, execution_id, url):
+        output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
+
+        flux_query = f"""
+        from(bucket: "{bucket}")
+        |> range(start: 0)
+        |> filter(fn: (r) => r["_measurement"] == "{measurement}" and r["ExecutionId"] == "{execution_id}")
+        """
+
+        headers = {
+            "Authorization": f"Token {token}",
+            "Content-Type": "application/vnd.flux"
+        }
+
+        try:
+            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
+            response.raise_for_status()
+
+            with open(output_file, "w") as f:
+                f.write(response.text)
+
+            Log.I(f"Data successfully exported to {output_file} from InfluxDB v2.x")
+        except requests.exceptions.RequestException as e:
+            Log.I(f"Error exporting data from InfluxDB v2.x: {e}")
