@@ -72,7 +72,7 @@ class Composer:
             if descriptor.Type == ExperimentType.MONROE:
                 actions.extend(cls.facility.GetMonroeActions())
             else:
-                for scenario in descriptor.Scenario:
+                for scenario in (descriptor.Scenario or []):
                     scenarioActions = cls.facility.GetScenarioActions(scenario)
                     for i, scenarioAction in enumerate(scenarioActions):
                         scenarioAction.Label = f"Sce_{i + 1}"
