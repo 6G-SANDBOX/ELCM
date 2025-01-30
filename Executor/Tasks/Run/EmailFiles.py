@@ -17,7 +17,7 @@ class EmailFiles(Task):
             'ExecutionId': (None, True),      
             'Email': (None, True),            
             'DirectoryPath': (None, True),
-            'DeleteZip': (None, True)    
+            'DeleteZip': (None, False)    
         }
 
     def Run(self):
