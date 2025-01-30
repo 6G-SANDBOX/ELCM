@@ -16,7 +16,8 @@ class EmailFiles(Task):
         self.paramRules = {
             'ExecutionId': (None, True),      
             'Email': (None, True),            
-            'DirectoryPath': (None, True),    # Required: Path to the directory containing the files
+            'DirectoryPath': (None, True),
+            'DeleteZip': (None, True)    
         }
 
     def Run(self):
@@ -29,6 +30,7 @@ class EmailFiles(Task):
         email_port = int(info.get("Port", None))
         email_server = info.get("Server", None)
         email = self.params.get("Email", None) 
+        delete_zip= self.params.get("DeleteZip", False)
         directory_path = self.params.get("DirectoryPath",None)  # Directory containing the files to process
         
         # Check for missing configuration or parameters
@@ -45,7 +47,7 @@ class EmailFiles(Task):
             missing_params.append("directory_path")
         # Return error if any parameter is missing
         if missing_params:
-            self.Log(Level.ERROR, f'Missing parameters: {', '.join(missing_params)}')
+            self.Log(Level.ERROR, f"Missing parameters: {', '.join(missing_params)}")
             return 
          
         zip_file_path = os.path.join(directory_path, f"zip_{executionId}.zip")  # Define the path of the final ZIP file
@@ -128,8 +130,9 @@ class EmailFiles(Task):
             self.Log(Level.ERROR, f'Error deleting original files: {e}')
 
         # Delete the ZIP file after sending the email
-        try:
-            os.remove(zip_file_path)
-            self.Log(Level.INFO, f'ZIP file {zip_file_path} deleted after sending email.')
-        except Exception as e:
-            self.Log(Level.ERROR, f'Error deleting ZIP file: {e}')
+        if delete_zip is True:
+            try:
+                os.remove(zip_file_path)
+                self.Log(Level.INFO, f'ZIP file {zip_file_path} deleted after sending email.')
+            except Exception as e:
+                self.Log(Level.ERROR, f'Error deleting ZIP file: {e}')
