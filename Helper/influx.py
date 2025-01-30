@@ -366,6 +366,7 @@ class InfluxDb:
             res.append(payload)
 
         return res
+    
     def export_influxdb_v1(influx_dir, database, measurement, execution_id, url, user, password):
         output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
 
