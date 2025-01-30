@@ -72,6 +72,17 @@ class Composer:
             if descriptor.Type == ExperimentType.MONROE:
                 actions.extend(cls.facility.GetMonroeActions())
             else:
+                for scenario in descriptor.Scenario:
+                    scenarioActions = cls.facility.GetScenarioActions(scenario)
+                    for i, scenarioAction in enumerate(scenarioActions):
+                        scenarioAction.Label = f"Sce_{i + 1}"
+                        scenarioActions[i] = scenarioAction
+                    if len(scenarioActions) != 0:
+                        actions.extend(scenarioActions)
+                    else:
+                        actions.append(cls.getMessageAction(  # Notify, but do not cancel execution
+                            "WARNING", f'Scenario "{scenario}" did not generate any actions'))
+
                 if descriptor.Automated:
                     for ue in descriptor.UEs:
                         actions.extend(cls.facility.GetUEActions(ue))
@@ -86,7 +97,7 @@ class Composer:
                 else:
                     delay = ActionInformation()
                     delay.TaskName = "Run.Delay"
-                    delay.Config = {'Time': descriptor.Duration*60}
+                    delay.Config = {'Time': descriptor.Duration * 60}
                     actions.append(delay)
 
         actions.sort(key=lambda action: action.Order)  # Sort by Order (only those at first level)

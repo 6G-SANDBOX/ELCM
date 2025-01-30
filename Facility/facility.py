@@ -26,7 +26,7 @@ class Facility:
     dashboards: Dict[str, List[DashboardPanel]] = {}
     kpis: Dict[str, List[Tuple[str, str, str, str]]] = {}
     resources: Dict[str, Resource] = {}
-    scenarios: Dict[str, Dict] = {}
+    scenarios: Dict[str, List[ActionInformation]] = {}
 
     Validation: List[Tuple[Level, str]] = []
 
@@ -84,6 +84,10 @@ class Facility:
     @classmethod
     def GetTestCaseActions(cls, id: str) -> List[ActionInformation]:
         return cls.testCases.get(id, [])
+
+    @classmethod
+    def GetScenarioActions(cls, id: str) -> List[ActionInformation]:
+        return cls.scenarios.get(id, [])
 
     @classmethod
     def GetMonroeActions(cls) -> List[ActionInformation]:
