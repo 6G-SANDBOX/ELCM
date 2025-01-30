@@ -31,8 +31,8 @@ class EmailFiles(Task):
         email_port = int(info.get("Port", None))
         email_server = info.get("Server", None)
         email = self.params.get("Email", None) 
-        delete_zip= self.params.get("DeleteZip", False)
         delete_original= self.params.get("DeleteOriginal", False)
+        delete_zip= self.params.get("DeleteZip", False)
         directory_path = self.params.get("DirectoryPath",None)
         
         # Check for missing configuration or parameters
@@ -122,6 +122,7 @@ class EmailFiles(Task):
             
             self.Log(Level.ERROR, f'Error sending email: {e}')
             return
+        
         if delete_original is True:
             # Delete the original files that were compressed
             try:
