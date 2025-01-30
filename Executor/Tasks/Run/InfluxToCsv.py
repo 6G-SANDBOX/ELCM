@@ -21,9 +21,7 @@ class InfluxToCsv(Task):
         execution_id = self.params.get('ExecutionId')
         influx_dir = self.parent.TempFolder
         measurement = self.params.get('Measurement')
-
-        self.Log(Level.INFO, f"Executing the request in the directory: {influx_dir}")
-
+        
         common_args = {
             'influx_dir': influx_dir,
             'measurement': measurement,
