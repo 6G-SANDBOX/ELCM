@@ -121,14 +121,6 @@ class EmailFiles(Task):
             self.Log(Level.ERROR, f'Error sending email: {e}')
             return
 
-        # Delete the original files that were compressed
-        try:
-            for file_path, _ in files_to_compress:
-                os.remove(file_path)
-            self.Log(Level.INFO, f'Original files in {directory_path} deleted.')
-        except Exception as e:
-            self.Log(Level.ERROR, f'Error deleting original files: {e}')
-
         # Delete the ZIP file after sending the email
         if delete_zip is True:
             try:
