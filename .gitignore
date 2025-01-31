@@ -115,4 +115,3 @@ MQTT.yml
 PROMETHEUS.yml
 KAFKA.yml
 email.yml
-CSV/
