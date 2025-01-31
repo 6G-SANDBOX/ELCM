@@ -495,14 +495,6 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 
 This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV file based on a specified measurement and execution ID. It supports both InfluxDB versions and handles the necessary configurations for exporting data via the InfluxDB query language (for v1.x) or Flux (for v2.x).
 
-**How It Works**:
-1. **Initialization**: Configures the task with the required parameters, such as the measurement, execution ID, and InfluxDB connection details.
-2. **Directory Setup**: Creates the directory where the CSV file will be saved, ensuring it exists before the export begins.
-3. **Version Detection**: Determines whether the InfluxDB instance is v1.x or v2.x.
-4. **Data Export**: 
-   - For **InfluxDB v1.x**, a query is executed using `curl` to fetch the data and export it as CSV.
-   - For **InfluxDB v2.x**, a Flux query is executed using `curl` to export the data in CSV format.
-
 **Configuration Parameters**:
 - `ExecutionId` (required): The unique identifier for the execution, used to filter data.
 - `Measurement` (required): The InfluxDB measurement to export.
@@ -515,20 +507,21 @@ Sequence:
   - Order: 1
     Task: Run.InfluxToCsv
     Config:
-      ExecutionId: "@{ExecutionId}"                      # Unique execution ID
-      Measurement: "KAFKA"                   # The InfluxDB measurement to export
+      ExecutionId: "@{ExecutionId}"        # Unique execution ID
+      Measurement: "KAFKA"                 # The InfluxDB measurement to export
 ```
 
 ## Run.EmailFiles
 
 **Description**:
 
-The **EmailFiles** task automates the process of compressing files from a specified directory into a ZIP file, attaching it to an email, and sending it to a designated receiver. It filters the files by an execution ID, ensuring that only relevant files are included in the ZIP. After the email is sent, the task deletes the original files and the generated ZIP file, maintaining a clean environment.
+The **EmailFiles** task automates the process of compressing files from a specified directory into a ZIP file, attaching it to an email, and sending it to a designated receiver. It filters the files by an execution ID, ensuring that only relevant files are included in the ZIP. After the email is sent, the task **can optionally** delete the original files and the generated ZIP file, maintaining a clean environment.
 
 **How It Works**:
 
 1. **Initialization**:
    - The task starts by configuring necessary parameters like `ExecutionId`, `Email`, and `DirectoryPath` to determine the files to be processed and the email recipient.
+   - It also includes optional parameters `DeleteOriginal` and `DeleteZip` to specify whether files should be deleted after processing.
 
 2. **File Collection and Compression**:
    - The task scans the specified directory (`DirectoryPath`) to find files that contain the `ExecutionId` in their names.
@@ -543,14 +536,16 @@ The **EmailFiles** task automates the process of compressing files from a specif
    - After attaching the ZIP file, the task sends the email using the configured SMTP settings.
 
 5. **File Cleanup**:
-   - Once the email is sent, the task deletes the original files that were included in the ZIP to avoid redundancy.
-   - The ZIP file is also deleted after the email is successfully sent, leaving no leftover files.
+   - If `DeleteOriginal` is set to `True`, the task deletes the original files that were included in the ZIP to avoid redundancy.
+   - If `DeleteZip` is set to `True`, the ZIP file is also deleted after the email is successfully sent, leaving no leftover files.
 
 **Configuration Parameters**:
 
 - **ExecutionId** (required): A unique identifier used to filter files for the ZIP and reference in the email content.
 - **Email** (required): The email address of the recipient to whom the ZIP file will be sent.
-- **DirectoryPath** (required): The directory path containing the files to be processed. Files within this directory that contain the `ExecutionId` in their name will be compressed into the ZIP.
+- **DirectoryPath** (optional): The directory path containing the files to be processed. Files within this directory that contain the `ExecutionId` in their name will be compressed into the ZIP. If not provided, the task defaults to the parent’s `TempFolder`.
+- **DeleteOriginal** (optional, default = False): If `True`, deletes the original files after they are zipped and sent.
+- **DeleteZip** (optional, default = False): If `True`, deletes the generated ZIP file once the email is successfully sent.
 
 **YAML Configuration Example**:
 
@@ -561,9 +556,11 @@ Sequence:
   - Order: 1
     Task: Run.EmailFiles
     Config:
-      ExecutionId: "@{ExecutionId}"              # Unique identifier for filtering files
+      ExecutionId: "@{ExecutionId}"          # Unique identifier for filtering files
       Email: "email@example.com"             # Receiver email address
-      DirectoryPath: "/path/to/files"            # Directory containing files to be compressed
+      DirectoryPath: "/path/to/files"        # Directory containing files to be compressed
+      DeleteOriginal: True                   # Optional: Delete original files after sending
+      DeleteZip: True                        # Optional: Delete ZIP file after sending
 ```
 ## Run.CliSsh
 
