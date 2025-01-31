@@ -16,9 +16,9 @@ class EmailFiles(Task):
         self.paramRules = {
             'ExecutionId': (None, True),      
             'Email': (None, True),            
-            'DirectoryPath': (None, True),
-            'DeleteOriginal': (None, False),
-            'DeleteZip': (None, False)    
+            'DirectoryPath': (None, False),
+            'DeleteOriginal': (False, False),
+            'DeleteZip': (False, False)
         }
 
     def Run(self):
@@ -30,10 +30,10 @@ class EmailFiles(Task):
         email_password = info.get("Password", None)
         email_port = int(info.get("Port", None))
         email_server = info.get("Server", None)
-        email = self.params.get("Email", None) 
+        email = self.params.get("Email", None)        
+        directory_path = self.params.get("DirectoryPath") or self.parent.TempFolder
         delete_original= self.params.get("DeleteOriginal", False)
         delete_zip= self.params.get("DeleteZip", False)
-        directory_path = self.params.get("DirectoryPath",None)
         
         # Check for missing configuration or parameters
         missing_params = []
