@@ -517,28 +517,6 @@ Sequence:
 
 The **EmailFiles** task automates the process of compressing files from a specified directory into a ZIP file, attaching it to an email, and sending it to a designated receiver. It filters the files by an execution ID, ensuring that only relevant files are included in the ZIP. After the email is sent, the task **can optionally** delete the original files and the generated ZIP file, maintaining a clean environment.
 
-**How It Works**:
-
-1. **Initialization**:
-   - The task starts by configuring necessary parameters like `ExecutionId`, `Email`, and `DirectoryPath` to determine the files to be processed and the email recipient.
-   - It also includes optional parameters `DeleteOriginal` and `DeleteZip` to specify whether files should be deleted after processing.
-
-2. **File Collection and Compression**:
-   - The task scans the specified directory (`DirectoryPath`) to find files that contain the `ExecutionId` in their names.
-   - If matching files are found, they are added to a ZIP file. The ZIP file is named based on the execution ID for easy reference.
-
-3. **Email Setup and Attachment**:
-   - The task configures the email credentials and SMTP server settings using an external email configuration class.
-   - It then creates an email with the subject line and body, both of which reference the `ExecutionId`.
-   - The generated ZIP file is attached to the email.
-
-4. **Email Sending**:
-   - After attaching the ZIP file, the task sends the email using the configured SMTP settings.
-
-5. **File Cleanup**:
-   - If `DeleteOriginal` is set to `True`, the task deletes the original files that were included in the ZIP to avoid redundancy.
-   - If `DeleteZip` is set to `True`, the ZIP file is also deleted after the email is successfully sent, leaving no leftover files.
-
 **Configuration Parameters**:
 
 - **ExecutionId** (required): A unique identifier used to filter files for the ZIP and reference in the email content.
