@@ -132,8 +132,8 @@ class EmailFiles(Task):
             except Exception as e:
                 self.Log(Level.ERROR, f'Error deleting original files: {e}')
 
-        # Delete the ZIP file after sending the email
         if delete_zip is True:
+            # Delete the ZIP file after sending the email
             try:
                 os.remove(zip_file_path)
                 self.Log(Level.INFO, f'ZIP file {zip_file_path} deleted after sending email.')
