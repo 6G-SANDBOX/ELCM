@@ -8,7 +8,6 @@ from Settings import Config
 from typing import Dict, List, Union
 from datetime import datetime, timezone
 from csv import DictWriter, DictReader, Dialect, QUOTE_NONE
-from os.path import abspath
 import re
 import requests
 import enum
@@ -208,7 +207,7 @@ class InfluxDb:
         allKeys.extend(sorted(payload.Tags.keys()))
 
         # https://stackoverflow.com/a/3348664 (newline)
-        with open(abspath(outputFile), 'w', encoding='utf-8', newline='') as output:
+        with open(os.path.abspath(outputFile), 'w', encoding='utf-8', newline='') as output:
             csv = DictWriter(output, fieldnames=allKeys, restval='')
             csv.writeheader()
             for point in payload.Points:
