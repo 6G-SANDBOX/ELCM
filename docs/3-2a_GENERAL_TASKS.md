@@ -257,7 +257,7 @@ Sequence:
 
 ```
 
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.KafkaConsummerToInflux task. This ensures that the task terminates properly and stops retrieving data from Kakfa. 
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.KafkaConsummerToInflux task. This ensures that the task terminates properly and stops retrieving data from Kakfa. 
 
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 ## Run.MqttToInflux
@@ -310,7 +310,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.MqttToInflux task. This ensures that the task terminates properly and stops retrieving data from MQTT.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.MqttToInflux task. This ensures that the task terminates properly and stops retrieving data from MQTT.
 
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
@@ -374,7 +374,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.PrometheusToInflux task. This ensures that the task terminates properly and stops retrieving data from Prometheus.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.PrometheusToInflux task. This ensures that the task terminates properly and stops retrieving data from Prometheus.
 
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
@@ -418,7 +418,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Port: "8094"           # Optional
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.TelegrafToInflux task. This ensures that the task terminates properly and stops retrieving data from Telegraf.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.TelegrafToInflux task. This ensures that the task terminates properly and stops retrieving data from Telegraf.
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.EmailNotification
@@ -456,32 +456,7 @@ Sequence:
       ExecutionId: "@{ExecutionId}"
       Email: "recipient@example.com"
 ```
-## Run.StopTask
 
-**Description**:
-
-This task sends a stop signal by putting a specific message into a control queue.
-
-**How It Works**:
-1. **Initialization**: Configures the task with the necessary parameters.
-2. **Stop Signal**: Constructs a stop signal message by combining the task name with the execution ID and places it in the control queue.
-
-**Configuration Parameters**:
-- `ExecutionId` (required): Unique identifier for the execution.
-- `Name` (required): Name of the task or process to be stopped.
-
-**YAML Configuration Example**:
-
-```yaml
-Version: 2
-Name: STOP_TASK
-Sequence:
-  - Order: 1
-    Task: Run.StopTask
-    Config:
-      ExecutionId: "@{ExecutionId}"
-      Name: "task_name"
-```
 ## Run.HelmDeploy
 Deploy the Helm Chart indicated by parameters in the cluster selected by the kubeconfig file where the ELCM resides. Configuration values:
 - `Action`: Action to be performed by the ELCM, one between "Deploy", "Delete" and "Rollback"
@@ -585,4 +560,4 @@ Sequence:
       AthonetLoginUrl: "https://athonet.example.com/core/login" # Athonet login URL
       AthonetQueryUrl: "https://athonet.example.com/core/prometheus"   # Athonet Prometheus query URL
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.
