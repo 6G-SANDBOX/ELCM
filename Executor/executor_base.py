@@ -94,23 +94,12 @@ class ExecutorBase(Child):
         parent = self.findParent()
         if parent is not None:
             parent.Milestones.append(milestone)
-            parent.Tasks.append(milestone)
 
     def ReadMilestone(self, milestone: str) -> bool:
         parent = self.findParent()
         if parent is not None:
             return milestone in parent.Milestones
         return False
-    
-    def RemoveMilestone(self, milestone: str):
-        parent = self.findParent()
-        if parent is not None and milestone in parent.Milestones:
-            parent.Milestones.remove(milestone)
-            parent.Tasks.remove(milestone)
-
-    def TaskList(self):
-        parent = self.findParent()
-        return parent.Tasks
     
     @property
     def RemoteApi(self):

@@ -38,7 +38,6 @@ class ExperimentRun:
         self._dashboardUrl = None
         self.Cancelled = False
         self.Milestones = []
-        self.Tasks = []
         self.RemoteApi = None
         self.RemoteId = None
         self.Created = datetime.now(timezone.utc)
