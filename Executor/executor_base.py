@@ -101,6 +101,11 @@ class ExecutorBase(Child):
             return milestone in parent.Milestones
         return False
     
+    def RemoveMilestone(self, milestone: str):
+        parent = self.findParent()
+        if parent is not None and milestone in parent.Milestones:
+            parent.Milestones.remove(milestone)
+    
     @property
     def RemoteApi(self):
         parent = self.findParent()
