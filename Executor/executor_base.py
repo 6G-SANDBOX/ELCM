@@ -108,7 +108,7 @@ class ExecutorBase(Child):
             parent.Milestones.remove(milestone)
             parent.Tasks.remove(milestone)
 
-    def ListTask(self):
+    def TaskList(self):
         parent = self.findParent()
         return parent.Tasks
     
