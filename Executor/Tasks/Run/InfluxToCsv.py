@@ -8,8 +8,7 @@ class InfluxToCsv(Task):
 
         # Define required and optional parameters for both InfluxDB v1 and v2
         self.paramRules = {
-            'ExecutionId': (None, True),     
-            'Measurement': (None, True)     # Required: InfluxDB measurement to export
+            'ExecutionId': (None, True)
         }
 
     def Run(self):
@@ -20,11 +19,9 @@ class InfluxToCsv(Task):
         version = influx.InfluxDb.detectInfluxDBVersion(url)  # Get the detected version
         execution_id = self.params.get('ExecutionId')
         influx_dir = self.parent.TempFolder
-        measurement = self.params.get('Measurement')
         
         common_args = {
             'influx_dir': influx_dir,
-            'measurement': measurement,
             'execution_id': execution_id,
             'url': url
         }

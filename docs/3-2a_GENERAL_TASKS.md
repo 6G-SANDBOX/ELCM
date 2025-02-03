@@ -493,11 +493,10 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 
 **Description**:
 
-This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV file based on a specified measurement and execution ID. It supports both InfluxDB versions and handles the necessary configurations for exporting data via the InfluxDB query language (for v1.x) or Flux (for v2.x).
+This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV file based on a specified execution ID. It supports both InfluxDB versions and handles the necessary configurations for exporting data via the InfluxDB query language (for v1.x) or Flux (for v2.x).
 
 **Configuration Parameters**:
 - `ExecutionId` (required): The unique identifier for the execution, used to filter data.
-- `Measurement` (required): The InfluxDB measurement to export.
 
 **YAML Configuration Example**:
 ```yaml
@@ -508,7 +507,6 @@ Sequence:
     Task: Run.InfluxToCsv
     Config:
       ExecutionId: "@{ExecutionId}"        # Unique execution ID
-      Measurement: "KAFKA"                 # The InfluxDB measurement to export
 ```
 
 ## Run.EmailFiles

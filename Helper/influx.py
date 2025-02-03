@@ -366,12 +366,12 @@ class InfluxDb:
 
         return res
     
-    def export_influxdb_v1(influx_dir, database, measurement, execution_id, url, user, password):
+    def export_influxdb_v1(influx_dir, database, execution_id, url, user, password):
         output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
 
         query_params = {
             "db": database,
-            "q": f'SELECT * FROM "{measurement}" WHERE "ExecutionId" = \'{execution_id}\''
+            "q": f'SELECT * FROM /.*/ WHERE "ExecutionId" = \'{execution_id}\''
         }
         headers = {"Accept": "application/csv"}
 
@@ -386,13 +386,13 @@ class InfluxDb:
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v1.x: {e}")
 
-    def export_influxdb_v2(influx_dir, bucket, measurement, token, org, execution_id, url):
+    def export_influxdb_v2(influx_dir, bucket, token, org, execution_id, url):
         output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
 
         flux_query = f"""
         from(bucket: "{bucket}")
         |> range(start: 0)
-        |> filter(fn: (r) => r["_measurement"] == "{measurement}" and r["ExecutionId"] == "{execution_id}")
+        |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
         """
 
         headers = {
