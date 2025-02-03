@@ -1,6 +1,6 @@
 import paho.mqtt.client as mqtt
 import json
-from Helper import utils, Level, influx
+from Helper import Level, influx
 from Settings import MQTTConfig
 from .to_influx import ToInfluxBase
 import time
@@ -67,7 +67,7 @@ class MqttToInflux(ToInfluxBase):
         executionId = self.params['ExecutionId']
         broker = self.params['Broker']
         port = int(self.params['Port'])
-        stop = self.params['Stop'] + "_" + str(executionId)
+        stop = self.params['Stop']
         base_path = self.params.get('Certificates', "")
         encryption = self.params['Encryption']
         account = self.params['Account']
@@ -107,9 +107,8 @@ class MqttToInflux(ToInfluxBase):
         client.loop_start()
         
         # Main loop to check for a stop signal from the control queue
-        while stop not in utils.task_list:
+        while not self.parent.ReadMilestone(stop):
             time.sleep(1)
-        utils.task_list.remove(stop)
         # Stop the MQTT client's network loop and disconnect
         client.loop_stop()
         client.disconnect()

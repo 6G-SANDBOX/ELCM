@@ -1,7 +1,7 @@
 import socket
 import ssl
 import json
-from Helper import utils, Level, influx
+from Helper import Level, influx
 import time
 import threading
 from .to_influx import ToInfluxBase
@@ -180,7 +180,7 @@ class TelegrafToInflux(ToInfluxBase):
     # Main method to start the task
     def Run(self):
         stop_event = threading.Event()
-        stop = self.params['Stop'] + "_" + str(self.executionId)
+        stop = self.params['Stop']
 
         if not isinstance(self.use_ssl, bool):
             self.Log(Level.ERROR, f"Exception telegraf bool")
@@ -190,7 +190,7 @@ class TelegrafToInflux(ToInfluxBase):
         tcp_thread = threading.Thread(target=self.tcp_handler, args=(stop_event,))
         tcp_thread.start()
 
-        while stop not in utils.task_list:
+        while not self.parent.ReadMilestone(stop):
             time.sleep(1)
 
         stop_event.set()

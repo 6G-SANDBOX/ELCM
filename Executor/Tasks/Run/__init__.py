@@ -15,7 +15,6 @@ from .upgrade_verdict import UpgradeVerdict
 from .evaluate import Evaluate
 from .robot_framework import RobotFramework
 from .kafka_consumerToInflux import KafkaConsummerToInflux
-from .stop_task import StopTask
 from .prometheus_ToInflux import PrometheusToInflux
 from .email_notification import EmailNotification
 from .mqtt_ToInflux import MqttToInflux

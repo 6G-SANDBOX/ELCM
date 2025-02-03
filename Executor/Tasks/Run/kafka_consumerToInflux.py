@@ -1,6 +1,6 @@
 from kafka import KafkaConsumer
 import json
-from Helper import utils, Level, influx
+from Helper import Level, influx
 from Settings import KAFKAConfig
 from .to_influx import ToInfluxBase
 
@@ -33,7 +33,7 @@ class KafkaConsummerToInflux(ToInfluxBase):
         IP_host = self.params['Ip']
         PORT_host = self.params['Port']
         TOPIC_Host = self.params['Topic']
-        stop = self.params['Stop'] + "_" + str(executionId)
+        stop = self.params['Stop']
         group_id_opt = self.params['GroupId']
         base_path = self.params.get('Certificates', "")
         encryption = self.params['Encryption']
@@ -83,7 +83,7 @@ class KafkaConsummerToInflux(ToInfluxBase):
             return
 
         # Main loop for processing Kafka messages
-        while stop not in utils.task_list:
+        while not self.parent.ReadMilestone(stop):
             # Consume messages from Kafka and send them to InfluxDB
             for message in consumer:
                 try:
@@ -102,4 +102,3 @@ class KafkaConsummerToInflux(ToInfluxBase):
                         self.SetVerdictOnError()
                         raise RuntimeError(f"Exiting due to unexpected error: {e}")
                 
-        utils.task_list.remove(stop)
