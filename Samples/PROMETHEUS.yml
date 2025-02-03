@@ -25,10 +25,9 @@ Sequence:
         - Task: Run.Delay
           Config:
             Time: 60
-        - Task: Run.StopTask
+        - Task: Run.AddMilestone
           Config:
-            ExecutionId: "@{ExecutionId}"
-            Name: "stop_prometheus"
+            Milestone: "stop_prometheus"
 Standard: True
 Dashboard:
   - Name: "query_range_1"

@@ -23,10 +23,9 @@ Sequence:
         - Task: Run.Delay
           Config:
             Time: 20
-        - Task: Run.StopTask
+        - Task: Run.AddMilestone
           Config:
-            ExecutionId: "@{ExecutionId}"
-            Name: "stop_ATHONET"
+            Milestone: "stop_ATHONET"
 Standard: True
 Dashboard:
   - Name: "amf_n5gs_msg_rcv_total_Deregistration_request__UE_originating"

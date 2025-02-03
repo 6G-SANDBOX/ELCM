@@ -15,10 +15,9 @@ Sequence:
         - Task: Run.Delay
           Config:
             Time: 60
-        - Task: Run.StopTask
+        - Task: Run.AddMilestone
           Config:
-            ExecutionId: "@{ExecutionId}"
-            Name: "stop_telegraf"
+            Milestone: "stop_telegraf"
 Standard: True
 Dashboard:
   - Name: "MEM_USED"
