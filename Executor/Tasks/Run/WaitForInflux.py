@@ -20,8 +20,6 @@ class WaitForInflux(Task):
         check_interval = self.params.get('CheckInterval')
         time_window = self.params.get('TimeWindow')
 
-        print(time_window,check_interval)
-
         if version == influx.Versions.V1:
             while influx.InfluxDb.is_influxdb_v1_receiving_data(
                 url, config.InfluxDb.Database, config.InfluxDb.User, 
