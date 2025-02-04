@@ -635,3 +635,29 @@ Sequence:
       AthonetQueryUrl: "https://athonet.example.com/core/prometheus"   # Athonet Prometheus query URL
 ```
 Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.
+
+## **Run.WaitForInflux**
+
+**Description**:  
+
+The **WaitForInflux** task waits until InfluxDB stops receiving data before proceeding with execution. It ensures that all data has been fully processed before any dependent task runs. The task periodically checks if new data is still being recorded and only continues once the database is idle.
+
+**Configuration Parameters**:  
+
+- **ExecutionId** (required): A unique identifier used to filter data in InfluxDB.
+- **CheckInterval** (optional, default = 30): Time in seconds between each check to determine if InfluxDB is still receiving data.
+- **TimeWindow** (optional, default = 30): Time range in seconds used in the query to check for incoming data.
+
+**YAML Configuration Example**:  
+
+```yaml
+Version: 2
+Name: WAIT_FOR_INFLUX
+Sequence:
+  - Order: 1
+    Task: Run.WaitForInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"  # Unique execution identifier
+      CheckInterval: 10              # Optional: Check every 10 seconds
+      TimeWindow: 20                 # Optional: Query the last 20 seconds of data
+```
