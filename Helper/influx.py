@@ -411,15 +411,15 @@ class InfluxDb:
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v2.x: {e}")
 
-    def is_influxdb_v1_receiving_data(url, database, user, password, execution_id):
-        
+    def is_influxdb_v1_receiving_data(url, database, user, password, execution_id, time_window):
+
         query_params = {
             "db": database,
-            "q": f"SELECT * FROM /.*/ WHERE time > now() - 30s AND ExecutionId = '{execution_id}' LIMIT 1"
+            "q": f"SELECT * FROM /.*/ WHERE time > now() - {time_window}s AND ExecutionId = '{execution_id}' LIMIT 1"
         }
 
         headers = {"Accept": "application/csv"}
- 
+
         try:
             response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
             response.raise_for_status()
@@ -427,11 +427,11 @@ class InfluxDb:
         except requests.exceptions.RequestException:
             return False
 
-    def is_influxdb_v2_receiving_data(url, bucket, token, org, execution_id):
-
+    def is_influxdb_v2_receiving_data(url, bucket, token, org, execution_id, time_window):
+        
         flux_query = f"""
         from(bucket: "{bucket}")
-        |> range(start: -30s)
+        |> range(start: -{time_window}s)
         |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
         |> limit(n: 1)
         """
