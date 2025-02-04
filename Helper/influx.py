@@ -379,7 +379,7 @@ class InfluxDb:
             response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
             response.raise_for_status()
 
-            with open(output_file, "w") as f:
+            with open(output_file, "w",encoding="utf-8") as f:
                 f.write(response.text)
 
             Log.I(f"Data successfully exported to {output_file} from InfluxDB v1.x")
@@ -404,9 +404,45 @@ class InfluxDb:
             response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
             response.raise_for_status()
 
-            with open(output_file, "w") as f:
+            with open(output_file, "w",encoding="utf-8") as f:
                 f.write(response.text)
 
             Log.I(f"Data successfully exported to {output_file} from InfluxDB v2.x")
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v2.x: {e}")
+
+    def is_influxdb_v1_receiving_data(url, database, user, password, execution_id):
+        
+        query_params = {
+            "db": database,
+            "q": f"SELECT * FROM /.*/ WHERE time > now() - 30s AND ExecutionId = '{execution_id}' LIMIT 1"
+        }
+
+        headers = {"Accept": "application/csv"}
+ 
+        try:
+            response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
+            response.raise_for_status()
+            return bool(response.text.strip())
+        except requests.exceptions.RequestException:
+            return False
+
+    def is_influxdb_v2_receiving_data(url, bucket, token, org, execution_id):
+
+        flux_query = f"""
+        from(bucket: "{bucket}")
+        |> range(start: -30s)
+        |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
+        |> limit(n: 1)
+        """
+        headers = {
+            "Authorization": f"Token {token}",
+            "Content-Type": "application/vnd.flux"
+        }
+
+        try:
+            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
+            response.raise_for_status()
+            return bool(response.text.strip())
+        except requests.exceptions.RequestException:
+            return False
