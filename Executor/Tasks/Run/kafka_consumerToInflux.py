@@ -3,6 +3,7 @@ import json
 from Helper import utils, Level, influx
 from Settings import KAFKAConfig
 from .to_influx import ToInfluxBase
+from datetime import datetime
 
 class KafkaConsummerToInflux(ToInfluxBase):
     # Initialize the Task superclass with necessary parameters
@@ -19,7 +20,8 @@ class KafkaConsummerToInflux(ToInfluxBase):
             'Account': (False, True), # Account for authentication, required
             'GroupId': (None, False), # Kafka consumer group ID, optional
             'Certificates': (None, False), # Path to SSL certificates, optional
-            'Encryption': (False, True)    # Flag for using SSL/TLS, required
+            'Encryption': (False, True),    # Flag for using SSL/TLS, required
+            'Timestamp': ('timestamp', False) # The name of the timestamp for the metrics, optional
         }
 
     def Run(self):
@@ -38,6 +40,7 @@ class KafkaConsummerToInflux(ToInfluxBase):
         base_path = self.params.get('Certificates', "")
         encryption = self.params['Encryption']
         account = self.params['Account']
+        timestamp_init=self.params.get('Timestamp')
 
         # Create common arguments for KafkaConsumer
         consumer_args = {
@@ -88,9 +91,12 @@ class KafkaConsummerToInflux(ToInfluxBase):
             for message in consumer:
                 try:
                     data = message.value
-                    flattened_data = self._flatten_json(data)
+                    flattened_data = self._flatten_json(data,timestamp_key=timestamp_init)
                     for key, value, timestamp in flattened_data:
                         measurement_data = {key: value}
+                        if not isinstance(timestamp, (int, float)):
+                            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                            timestamp = int(dt.timestamp())
                         # Send the flattened data to InfluxDB
                         self._send_to_influx(measurement, measurement_data, timestamp, executionId)
                     break
