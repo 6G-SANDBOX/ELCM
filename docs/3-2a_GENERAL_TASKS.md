@@ -225,6 +225,7 @@ This task consumes messages from a Kafka topic and sends them to InfluxDB.
 - `GroupId` (optional): Kafka consumer group ID, used to manage offsets and group consumption.
 - `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
 - `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+- `Timestamp` (optional): The name of the timestamp for the metrics.
 
 **Encryption**:
 
