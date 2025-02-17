@@ -21,7 +21,7 @@ class KafkaConsummerToInflux(ToInfluxBase):
             'GroupId': (None, False), # Kafka consumer group ID, optional
             'Certificates': (None, False), # Path to SSL certificates, optional
             'Encryption': (False, True),    # Flag for using SSL/TLS, required
-            'Timestamp': ('timestamp', False)
+            'Timestamp': ('timestamp', False) # The name of the timestamp for the metrics, optional
         }
 
     def Run(self):
