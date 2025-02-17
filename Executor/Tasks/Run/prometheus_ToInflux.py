@@ -1,5 +1,5 @@
 from prometheus_api_client import PrometheusConnect
-from Helper import utils, Level, influx
+from Helper import Level, influx
 from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
@@ -107,7 +107,7 @@ class PrometheusToInflux(ToInfluxBase):
         queries_range = self.params['QueriesRange']
         queries_custom = self.params['QueriesCustom']
         start_time = datetime.now()
-        stop = self.params['Stop'] + "_" + str(executionId)
+        stop = self.params['Stop']
         step = self.params['Step']
         measurement = self.params['Measurement']
         base_path = self.params.get('Certificates', "")
@@ -135,9 +135,8 @@ class PrometheusToInflux(ToInfluxBase):
          
         self.Log(Level.INFO, f"Connected to Prometheus at {URL_host}:{PORT_host}")
         
-        while stop not in utils.task_list:
+        while not self.parent.ReadMilestone(stop):
             time.sleep(1)
-        utils.task_list.remove(stop)
         end_time = datetime.now()
 
         # Process both range and custom queries

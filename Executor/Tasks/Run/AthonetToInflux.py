@@ -1,6 +1,6 @@
 from prometheus_api_client import PrometheusConnect
 from .to_influx import ToInfluxBase
-from Helper import utils, Level, influx
+from Helper import Level, influx
 from datetime import datetime
 import requests
 import re
@@ -167,13 +167,12 @@ class AthonetToInflux(ToInfluxBase):
         queries_range = self.params['QueriesRange']
         queries_custom = self.params['QueriesCustom']
         start_time = datetime.now()
-        stop = self.params['Stop'] + "_" + str(executionId)
+        stop = self.params['Stop']
         step = self.params['Step']
         measurement = self.params['Measurement']
 
-        while stop not in utils.task_list:
+        while not self.parent.ReadMilestone(stop):
             time.sleep(1)
-        utils.task_list.remove(stop)
         end_time = datetime.now()
 
         data_dict = {}
