@@ -2,6 +2,10 @@ from Task import Task
 from Helper import influx
 from datetime import timezone, datetime
 from typing import Union, Dict, Any
+from Settings import Config
+import requests
+import csv
+import time
 
 class ToInfluxBase(Task):
     def __init__(self, name, parent, params, logMethod, conditionMethod):
@@ -58,6 +62,51 @@ class ToInfluxBase(Task):
 
         influx.InfluxDb.Send(influx_payload)
 
+    def _send_to_influx_CSV(self,measurement,csv_data,executionId):
+
+        config = Config()
+        url = f"http://{config.InfluxDb.Host}:{config.InfluxDb.Port}/api/v2/write"
+        params_influx = {"org": config.InfluxDb.Org, "bucket": config.InfluxDb.Database, "precision": "s"}
+        headers_influx = {"Authorization": f"Token {config.InfluxDb.Token}", "Content-Type": "text/plain; charset=utf-8"}
+        
+        lines = csv_data.split("\n")
+
+        sniffer = csv.Sniffer()
+        sample = "\n".join(lines[:2])  
+        delimiter = ','  
+        if sniffer.has_header(sample):
+            delimiter = sniffer.sniff(sample).delimiter
+
+        reader = csv.reader(lines, delimiter=delimiter)
+
+        column_names = next(reader)
+
+        for row in reader:
+            if len(row) != len(column_names):
+                continue
+
+            data_dict = dict(zip(column_names, row))
+
+            timestamp_influx = int(time.time())
+
+            tags = f"ExecutionId={executionId}"
+            fields = []
+            for key, value in data_dict.items():
+                key_cleaned = key.replace(" ", "_").replace("->", "_to_").replace("/", "_")
+                try:
+                    float_value = float(value)
+                    fields.append(f"{key_cleaned}={float_value}")
+                except ValueError:
+                    if value.lower() in ["true", "false"]:
+                        bool_value = "true" if value.lower() == "true" else "false"
+                        fields.append(f"{key_cleaned}={bool_value}")
+                    else:
+                        safe_value = value.replace('"', '\\"')
+                        fields.append(f'{key_cleaned}="{safe_value}"')
+
+            influx_line = f"{measurement},{tags} {','.join(fields)} {timestamp_influx}"
+            response = requests.post(url=url, params=params_influx, headers=headers_influx, data=influx_line)
+            response.raise_for_status()
 
     def _flatten_json(self,nested_json, parent_key='', sep='_', timestamp_key='timestamp', root_timestamp=None):
         data_with_timestamps = []

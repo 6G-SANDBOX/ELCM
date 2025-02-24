@@ -21,7 +21,8 @@ class KafkaConsummerToInflux(ToInfluxBase):
             'GroupId': (None, False), # Kafka consumer group ID, optional
             'Certificates': (None, False), # Path to SSL certificates, optional
             'Encryption': (False, True),    # Flag for using SSL/TLS, required
-            'Timestamp': ('timestamp', False) # The name of the timestamp for the metrics, optional
+            'Timestamp': ('timestamp', False), # The name of the timestamp for the metrics, optional
+            'CSV': (False, False) # Flag to enable CSV export, optional.
         }
 
     def Run(self):
@@ -41,13 +42,14 @@ class KafkaConsummerToInflux(ToInfluxBase):
         encryption = self.params['Encryption']
         account = self.params['Account']
         timestamp_init=self.params.get('Timestamp')
+        csv_init=self.params.get('CSV')
 
         # Create common arguments for KafkaConsumer
         consumer_args = {
             'bootstrap_servers': f"{IP_host}:{PORT_host}",
             'group_id': group_id_opt,
             'consumer_timeout_ms': 1000,
-            'value_deserializer': lambda x: json.loads(x.decode('utf-8'))
+            'value_deserializer': (lambda x: json.loads(x.decode('utf-8'))) if not csv_init else (lambda x: x.decode('utf-8'))
         }
 
         # Initialize KafkaConsumer based on authentication and encryption configuration
@@ -90,16 +92,22 @@ class KafkaConsummerToInflux(ToInfluxBase):
             # Consume messages from Kafka and send them to InfluxDB
             for message in consumer:
                 try:
-                    data = message.value
-                    flattened_data = self._flatten_json(data,timestamp_key=timestamp_init)
-                    for key, value, timestamp in flattened_data:
-                        measurement_data = {key: value}
-                        if not isinstance(timestamp, (int, float)):
-                            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                            timestamp = int(dt.timestamp())
-                        # Send the flattened data to InfluxDB
-                        self._send_to_influx(measurement, measurement_data, timestamp, executionId)
-                    break
+                    if not csv_init:
+                        data = message.value
+                        flattened_data = self._flatten_json(data,timestamp_key=timestamp_init)
+                        for key, value, timestamp in flattened_data:
+                            measurement_data = {key: value}
+                            if not isinstance(timestamp, (int, float)):
+                                dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                                timestamp = int(dt.timestamp())
+                            # Send the flattened data to InfluxDB
+                            self._send_to_influx(measurement, measurement_data, timestamp, executionId)
+                    else:
+                        csv_data = message.value.strip()
+                        if not csv_data:
+                            continue
+                        self._send_to_influx_CSV(measurement,csv_data,executionId)
+                    break        
                 except Exception as e:
                     if isinstance(e, influx.InfluxDBError) and e.response.status==442:
                         self.Log(Level.WARNING, f"Warning (KAFKA): Unprocessable entity (422). Invalid data: {data}")
