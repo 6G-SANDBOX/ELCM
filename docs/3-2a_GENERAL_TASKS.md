@@ -203,7 +203,7 @@ on the value of a published variable. Configuration values:
 - `VerdictOnNoMatch`: Verdict to set if the value does not match the regular expression. Defaults to `NotSet`.
 
 
-## Run.KafkaConsummerToInflux
+## Run.KafkaConsumerToInflux
 
 **Description**:
 
@@ -225,11 +225,12 @@ This task consumes messages from a Kafka topic and sends them to InfluxDB.
 - `GroupId` (optional): Kafka consumer group ID, used to manage offsets and group consumption.
 - `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
 - `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
-- `Timestamp` (optional): The name of the timestamp for the metrics.
+- `Timestamp` (optional): The name of the timestamp field for the metrics.
+- `CSV` (optional): Flag indicating whether CSV output is enabled (`True` or `False`).
 
 **Encryption**:
 
-This task uses encryption to secure the connection:
+This task supports encryption to secure the connection:
 
 - **TLS/SSL**: If enabled, the connection to Kafka is secured using TLS/SSL. The configuration includes:
   - **Certificate File** (`client-cert-signed.pem`): Authenticates the client to the Kafka broker.
@@ -243,7 +244,7 @@ Version: 2
 Name: KAFKA
 Sequence:
   - Order: 1
-    Task: Run.KafkaConsummerToInflux
+    Task: Run.KafkaConsumerToInflux
     Config:
       ExecutionId: "@{ExecutionId}"
       Ip: "X.X.X.X"
@@ -255,12 +256,13 @@ Sequence:
       GroupId: "my_group"     # Optional
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
-
+      CSV: False              # Optional, default is False
 ```
 
-Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.KafkaConsummerToInflux task. This ensures that the task terminates properly and stops retrieving data from Kakfa. 
+**Important Note**: 
+A stop task (e.g., `AddMilestone`) must be used to ensure the `Run.KafkaConsumerToInflux` task terminates properly and stops retrieving data from Kafka.
 
-For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
+For server configuration details, refer to: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md).
 ## Run.MqttToInflux
 
 **Description**:
