@@ -4,7 +4,7 @@ Sequence:
   - Order: 1
     Task: Flow.Parallel
     Children:
-      - Task: Run.KafkaConsummerToInflux
+      - Task: Run.KafkaConsumerToInflux
         Config:
           ExecutionId: "@{ExecutionId}"
           Ip: "192.168.xxx.xxx"
