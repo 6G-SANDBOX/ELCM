@@ -5,7 +5,7 @@ from Settings import KAFKAConfig
 from .to_influx import ToInfluxBase
 from datetime import datetime
 
-class KafkaConsummerToInflux(ToInfluxBase):
+class KafkaConsumerToInflux(ToInfluxBase):
     # Initialize the Task superclass with necessary parameters
     def __init__(self, logMethod, parent, params):
         super().__init__("KAFKA", parent, params, logMethod, None)
