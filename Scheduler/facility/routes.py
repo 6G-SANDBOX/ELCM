@@ -102,6 +102,9 @@ def upload_test_case():
 
     if not file:
         return jsonify({"success": False, "message": "No file received"}), 400
+    
+    if not file.filename.lower().endswith('.yml'):
+        return jsonify({"success": False, "message": "Invalid file extension. Only .yml allowed."}), 400
 
     save_path = os.path.join(Facility.TESTCASE_FOLDER, file.filename)
 
