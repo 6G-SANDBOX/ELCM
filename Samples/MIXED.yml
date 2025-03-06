@@ -57,10 +57,9 @@ Sequence:
         - Task: Run.Delay
           Config:
             Time: 60
-        - Task: Run.StopTask
+        - Task: Run.AddMilestone
           Config:
-            ExecutionId: "@{ExecutionId}"
-            Name: "stop_mqtt"
+            Milestone: "stop_mqtt"
   - Order: 7
     Task: Run.EmailNotification
     Config:

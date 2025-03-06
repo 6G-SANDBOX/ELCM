@@ -4,7 +4,7 @@ Sequence:
   - Order: 1
     Task: Flow.Parallel
     Children:
-      - Task: Run.KafkaConsummerToInflux
+      - Task: Run.KafkaConsumerToInflux
         Config:
           ExecutionId: "@{ExecutionId}"
           Ip: "192.168.xxx.xxx"
@@ -19,10 +19,9 @@ Sequence:
         - Task: Run.Delay
           Config:
             Time: 60   
-        - Task: Run.StopTask
+        - Task: Run.AddMilestone
           Config:
-            ExecutionId: "@{ExecutionId}"
-            Name: "stop_kafka"
+            Milestone: "stop_kafka"
 Standard: True
 Dashboard:
   - Name: "Temperature_KAFKA"

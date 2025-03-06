@@ -203,7 +203,7 @@ on the value of a published variable. Configuration values:
 - `VerdictOnNoMatch`: Verdict to set if the value does not match the regular expression. Defaults to `NotSet`.
 
 
-## Run.KafkaConsummerToInflux
+## Run.KafkaConsumerToInflux
 
 **Description**:
 
@@ -225,10 +225,12 @@ This task consumes messages from a Kafka topic and sends them to InfluxDB.
 - `GroupId` (optional): Kafka consumer group ID, used to manage offsets and group consumption.
 - `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
 - `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
+- `Timestamp` (optional): The name of the timestamp field for the metrics.
+- `CSV` (optional): Flag indicating whether CSV output is enabled (`True` or `False`).
 
 **Encryption**:
 
-This task uses encryption to secure the connection:
+This task supports encryption to secure the connection:
 
 - **TLS/SSL**: If enabled, the connection to Kafka is secured using TLS/SSL. The configuration includes:
   - **Certificate File** (`client-cert-signed.pem`): Authenticates the client to the Kafka broker.
@@ -242,7 +244,7 @@ Version: 2
 Name: KAFKA
 Sequence:
   - Order: 1
-    Task: Run.KafkaConsummerToInflux
+    Task: Run.KafkaConsumerToInflux
     Config:
       ExecutionId: "@{ExecutionId}"
       Ip: "X.X.X.X"
@@ -254,12 +256,13 @@ Sequence:
       GroupId: "my_group"     # Optional
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
-
+      CSV: False              # Optional, default is False
 ```
 
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.KafkaConsummerToInflux task. This ensures that the task terminates properly and stops retrieving data from Kakfa. 
+**Important Note**: 
+A stop task (e.g., `AddMilestone`) must be used to ensure the `Run.KafkaConsumerToInflux` task terminates properly and stops retrieving data from Kafka.
 
-For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
+For server configuration details, refer to: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md).
 ## Run.MqttToInflux
 
 **Description**:
@@ -310,7 +313,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.MqttToInflux task. This ensures that the task terminates properly and stops retrieving data from MQTT.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.MqttToInflux task. This ensures that the task terminates properly and stops retrieving data from MQTT.
 
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
@@ -374,7 +377,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Encryption: True        # Set to True if TLS/SSL is used, False otherwise
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.PrometheusToInflux task. This ensures that the task terminates properly and stops retrieving data from Prometheus.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.PrometheusToInflux task. This ensures that the task terminates properly and stops retrieving data from Prometheus.
 
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
@@ -418,7 +421,7 @@ Sequence:
       Certificates: "/path/to/certificates/"  # Optional, if encryption is used
       Port: "8094"           # Optional
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.TelegrafToInflux task. This ensures that the task terminates properly and stops retrieving data from Telegraf.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.TelegrafToInflux task. This ensures that the task terminates properly and stops retrieving data from Telegraf.
 For server configuration, consult: [Misc configurations](/docs/A3_MISC_CONFIGURATIONS.md)
 
 ## Run.EmailNotification
@@ -456,32 +459,7 @@ Sequence:
       ExecutionId: "@{ExecutionId}"
       Email: "recipient@example.com"
 ```
-## Run.StopTask
 
-**Description**:
-
-This task sends a stop signal by putting a specific message into a control queue.
-
-**How It Works**:
-1. **Initialization**: Configures the task with the necessary parameters.
-2. **Stop Signal**: Constructs a stop signal message by combining the task name with the execution ID and places it in the control queue.
-
-**Configuration Parameters**:
-- `ExecutionId` (required): Unique identifier for the execution.
-- `Name` (required): Name of the task or process to be stopped.
-
-**YAML Configuration Example**:
-
-```yaml
-Version: 2
-Name: STOP_TASK
-Sequence:
-  - Order: 1
-    Task: Run.StopTask
-    Config:
-      ExecutionId: "@{ExecutionId}"
-      Name: "task_name"
-```
 ## Run.HelmDeploy
 Deploy the Helm Chart indicated by parameters in the cluster selected by the kubeconfig file where the ELCM resides. Configuration values:
 - `Action`: Action to be performed by the ELCM, one between "Deploy", "Delete" and "Rollback"
@@ -634,7 +612,7 @@ Sequence:
       AthonetLoginUrl: "https://athonet.example.com/core/login" # Athonet login URL
       AthonetQueryUrl: "https://athonet.example.com/core/prometheus"   # Athonet Prometheus query URL
 ```
-Note: It is necessary to use a stop task (StopTask) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.
+Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.
 
 ## **Run.WaitForInflux**
 
