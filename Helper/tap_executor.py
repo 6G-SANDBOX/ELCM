@@ -72,7 +72,7 @@ class Tap:
         def _inferLevel(l: str) -> Level:
             for level in _levels:
                 string, res = level
-                if re.match(f'.*:\s*{string}\s*:.*', l): return res
+                if re.match(rf'.*:\s*{string}\s*:.*', l): return res
             return Level.INFO
 
         pipe = process.stdout
