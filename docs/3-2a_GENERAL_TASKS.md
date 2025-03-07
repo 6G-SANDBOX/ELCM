@@ -467,6 +467,55 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 - `ReleaseName`: Chart release name
 - `HelmChartPath`: Path of the HelmChart to be deployed
 
+## Run.InfluxToCsv
+
+**Description**:
+
+This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV file based on a specified execution ID. It supports both InfluxDB versions and handles the necessary configurations for exporting data via the InfluxDB query language (for v1.x) or Flux (for v2.x).
+
+**Configuration Parameters**:
+- `ExecutionId` (required): The unique identifier for the execution, used to filter data.
+
+**YAML Configuration Example**:
+```yaml
+Version: 2
+Name: EXPORT_INFLUX_TO_CSV
+Sequence:
+  - Order: 1
+    Task: Run.InfluxToCsv
+    Config:
+      ExecutionId: "@{ExecutionId}"        # Unique execution ID
+```
+
+## Run.EmailFiles
+
+**Description**:
+
+The **EmailFiles** task automates the process of compressing files from a specified directory into a ZIP file, attaching it to an email, and sending it to a designated receiver. It filters the files by an execution ID, ensuring that only relevant files are included in the ZIP. After the email is sent, the task **can optionally** delete the original files and the generated ZIP file, maintaining a clean environment.
+
+**Configuration Parameters**:
+
+- **ExecutionId** (required): A unique identifier used to filter files for the ZIP and reference in the email content.
+- **Email** (required): The email address of the recipient to whom the ZIP file will be sent.
+- **DirectoryPath** (optional): The directory path containing the files to be processed. Files within this directory that contain the `ExecutionId` in their name will be compressed into the ZIP. If not provided, the task defaults to the parent’s `TempFolder`.
+- **DeleteOriginal** (optional, default = False): If `True`, deletes the original files after they are zipped and sent.
+- **DeleteZip** (optional, default = False): If `True`, deletes the generated ZIP file once the email is successfully sent.
+
+**YAML Configuration Example**:
+
+```yaml
+Version: 2
+Name: SEND_EMAIL_WITH_FILES
+Sequence:
+  - Order: 1
+    Task: Run.EmailFiles
+    Config:
+      ExecutionId: "@{ExecutionId}"          # Unique identifier for filtering files
+      Email: "email@example.com"             # Receiver email address
+      DirectoryPath: "/path/to/files"        # Directory containing files to be compressed
+      DeleteOriginal: True                   # Optional: Delete original files after sending
+      DeleteZip: True                        # Optional: Delete ZIP file after sending
+```
 ## Run.CliSsh
 
 **Description**:
@@ -564,3 +613,29 @@ Sequence:
       AthonetQueryUrl: "https://athonet.example.com/core/prometheus"   # Athonet Prometheus query URL
 ```
 Note: It is necessary to use a stop task (AddMilestone) to halt the execution of the Run.AthonetToInflux. This ensures that the task terminates properly and stops retrieving data from Prometheus.
+
+## **Run.WaitForInflux**
+
+**Description**:  
+
+The **WaitForInflux** task waits until InfluxDB stops receiving data before proceeding with execution. It ensures that all data has been fully processed before any dependent task runs. The task periodically checks if new data is still being recorded and only continues once the database is idle.
+
+**Configuration Parameters**:  
+
+- **ExecutionId** (required): A unique identifier used to filter data in InfluxDB.
+- **CheckInterval** (optional, default = 30): Time in seconds between each check to determine if InfluxDB is still receiving data.
+- **TimeWindow** (optional, default = 30): Time range in seconds used in the query to check for incoming data.
+
+**YAML Configuration Example**:  
+
+```yaml
+Version: 2
+Name: WAIT_FOR_INFLUX
+Sequence:
+  - Order: 1
+    Task: Run.WaitForInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"  # Unique execution identifier
+      CheckInterval: 10              # Optional: Check every 10 seconds
+      TimeWindow: 20                 # Optional: Query the last 20 seconds of data
+```

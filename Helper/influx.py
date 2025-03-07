@@ -8,11 +8,11 @@ from Settings import Config
 from typing import Dict, List, Union
 from datetime import datetime, timezone
 from csv import DictWriter, DictReader, Dialect, QUOTE_NONE
-from os.path import abspath
 import re
 import requests
 import enum
 from Helper import Log
+import os
 
 class BatchingCallback(object):
 
@@ -207,7 +207,7 @@ class InfluxDb:
         allKeys.extend(sorted(payload.Tags.keys()))
 
         # https://stackoverflow.com/a/3348664 (newline)
-        with open(abspath(outputFile), 'w', encoding='utf-8', newline='') as output:
+        with open(os.path.abspath(outputFile), 'w', encoding='utf-8', newline='') as output:
             csv = DictWriter(output, fieldnames=allKeys, restval='')
             csv.writeheader()
             for point in payload.Points:
@@ -365,3 +365,84 @@ class InfluxDb:
             res.append(payload)
 
         return res
+    
+    def export_influxdb_v1(influx_dir, database, execution_id, url, user, password):
+        output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
+
+        query_params = {
+            "db": database,
+            "q": f'SELECT * FROM /.*/ WHERE "ExecutionId" = \'{execution_id}\''
+        }
+        headers = {"Accept": "application/csv"}
+
+        try:
+            response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
+            response.raise_for_status()
+
+            with open(output_file, "w",encoding="utf-8") as f:
+                f.write(response.text)
+
+            Log.I(f"Data successfully exported to {output_file} from InfluxDB v1.x")
+        except requests.exceptions.RequestException as e:
+            Log.I(f"Error exporting data from InfluxDB v1.x: {e}")
+
+    def export_influxdb_v2(influx_dir, bucket, token, org, execution_id, url):
+        output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
+
+        flux_query = f"""
+        from(bucket: "{bucket}")
+        |> range(start: 0)
+        |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
+        """
+
+        headers = {
+            "Authorization": f"Token {token}",
+            "Content-Type": "application/vnd.flux"
+        }
+
+        try:
+            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
+            response.raise_for_status()
+
+            with open(output_file, "w",encoding="utf-8") as f:
+                f.write(response.text)
+
+            Log.I(f"Data successfully exported to {output_file} from InfluxDB v2.x")
+        except requests.exceptions.RequestException as e:
+            Log.I(f"Error exporting data from InfluxDB v2.x: {e}")
+
+    def is_influxdb_v1_receiving_data(url, database, user, password, execution_id, time_window):
+
+        query_params = {
+            "db": database,
+            "q": f"SELECT * FROM /.*/ WHERE time > now() - {time_window}s AND ExecutionId = '{execution_id}' LIMIT 1"
+        }
+
+        headers = {"Accept": "application/csv"}
+
+        try:
+            response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
+            response.raise_for_status()
+            return bool(response.text.strip())
+        except requests.exceptions.RequestException:
+            return False
+
+    def is_influxdb_v2_receiving_data(url, bucket, token, org, execution_id, time_window):
+        
+        flux_query = f"""
+        from(bucket: "{bucket}")
+        |> range(start: -{time_window}s)
+        |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
+        |> limit(n: 1)
+        """
+        headers = {
+            "Authorization": f"Token {token}",
+            "Content-Type": "application/vnd.flux"
+        }
+
+        try:
+            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
+            response.raise_for_status()
+            return bool(response.text.strip())
+        except requests.exceptions.RequestException:
+            return False
