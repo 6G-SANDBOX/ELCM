@@ -8,6 +8,5 @@ fi
 
 echo Starting ELCM on port $port
 source ./venv/bin/activate
-export SECRET_KEY='super secret'
 flask run --host 0.0.0.0 --port $port
 deactivate
