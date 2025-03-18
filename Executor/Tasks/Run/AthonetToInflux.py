@@ -119,7 +119,7 @@ class AthonetToInflux(ToInfluxBase):
                     self.Log(Level.INFO, f"Range query executed successfully: {query}")
                     if data:
                         self.store_query_data(data, query, data_dict)
-                    break  # Salir del ciclo si la consulta se ejecutó correctamente.
+                    break
                 except Exception as e:
                     attempts += 1
                     self.Log(Level.ERROR, f"Error executing range query '{query}', attempt {attempts}: {e}")
@@ -141,7 +141,7 @@ class AthonetToInflux(ToInfluxBase):
                     self.Log(Level.INFO, f"Custom query executed successfully: {query}")
                     if data:
                         self.store_query_data(data, query, data_dict)
-                    break  # Consulta exitosa, salir del ciclo.
+                    break
                 except Exception as e:
                     attempts += 1
                     self.Log(Level.ERROR, f"Error executing custom query '{query}', attempt {attempts}: {e}")
