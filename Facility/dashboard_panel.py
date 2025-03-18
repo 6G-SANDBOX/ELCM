@@ -210,7 +210,7 @@ class DashboardPanel:
             "select": [
                 [
                     {"params": [self.Field], "type": "field"},
-                    {"params": [], "type": "mean"}
+                    {"params": [], "type": "last"}
                 ]
             ],
             "tags": [{"key": "ExecutionId", "operator": "=", "value": str(executionId)}]
@@ -222,7 +222,7 @@ class DashboardPanel:
             f"from(bucket: \"{self.influx_config.Database}\") |> range(start: v.timeRangeStart, stop: "
             f"v.timeRangeStop) |> filter(fn: (r) => r[\"_measurement\"] == \"{self.Measurement}\") |> filter(fn: (r) "
             f"=> r[\"ExecutionId\"] == \"{executionId}\") |> filter(fn: (r) => r[\"_field\"] == \"{self.Field}\") |> "
-            f"aggregateWindow(every: {interval}, fn: mean, createEmpty: false)")        
+            f"aggregateWindow(every: {interval}, fn: last, createEmpty: false)")        
         return {
             "query": flux_query,
             "format": "flux",

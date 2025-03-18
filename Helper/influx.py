@@ -220,10 +220,6 @@ class InfluxDb:
     def CsvToPayload(cls, measurement: str, csvFile: str, delimiter: str, timestampKey: str,
                      tryConvert: bool = True, keysToRemove: List[str] = None) -> InfluxPayload:
         def _convert(value: str) -> Union[int, float, bool, str]:
-            try:
-                return int(value)
-            except ValueError:
-                pass
 
             try:
                 return float(value)
