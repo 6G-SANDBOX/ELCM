@@ -64,7 +64,6 @@ class MqttToInflux(ToInfluxBase):
         info = mqtt_info.user
         user = info.get("User", "")
         password = info.get("Password", "")
-        executionId = self.params['ExecutionId']
         broker = self.params['Broker']
         port = int(self.params['Port'])
         stop = self.params['Stop']

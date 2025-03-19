@@ -8,13 +8,14 @@ import csv
 import time
 import re
 
-def sanitize_string(name: str) -> str:
-
-    return re.sub(r'[^a-zA-Z0-9_]', '_', name).rstrip('_')
 
 class ToInfluxBase(Task):
     def __init__(self, name, parent, params, logMethod, conditionMethod):
         super().__init__(name, parent, params, logMethod, conditionMethod)
+
+    @staticmethod
+    def sanitize_string(name: str) -> str:
+        return re.sub(r'[^a-zA-Z0-9_]', '_', name).rstrip('_')
 
     def _convert(self, value: Any) -> Union[int, float, bool, str, Dict[str, Any]]:
         if isinstance(value, str):
@@ -82,7 +83,7 @@ class ToInfluxBase(Task):
             tags = f"ExecutionId={executionId}"
             fields = []
             for key, value in data_dict.items():
-                key_cleaned = sanitize_string(key)
+                key_cleaned = self.sanitize_string(key)
                 try:
                     float_value = float(value)
                     fields.append(f"{key_cleaned}={float_value}")
@@ -106,7 +107,7 @@ class ToInfluxBase(Task):
 
         for key, value in nested_json.items():
             new_key = parent_key + sep + key if parent_key else key
-            new_key = sanitize_string(new_key)
+            new_key = self.sanitize_string(new_key)
             if isinstance(value, dict):
                 data_with_timestamps.extend(self._flatten_json(value, new_key, sep=sep, timestamp_key=timestamp_key, root_timestamp=root_timestamp))
             elif isinstance(value, list):
@@ -122,14 +123,14 @@ class ToInfluxBase(Task):
         items = []
         for key, value in nested_json.items():
             new_key = parent_key + sep + key if parent_key else key
-            new_key = sanitize_string(new_key)
+            new_key = self.sanitize_string(new_key)
             if isinstance(value, dict):
                 items.extend(self._flatten_prometheus_json(value, new_key, sep=sep).items())
             elif isinstance(value, list):
                 for i, v in enumerate(value):
                     if isinstance(v, list) and len(v) == 2:
-                        timestamp_key = sanitize_string(f'{new_key}_timestamp_{i}')
-                        value_key = sanitize_string(f'{new_key}_value_{i}')
+                        timestamp_key = self.sanitize_string(f'{new_key}_timestamp_{i}')
+                        value_key = self.sanitize_string(f'{new_key}_value_{i}')
                         items.append((timestamp_key, v[0]))
                         items.append((value_key, v[1]))
                     else:
@@ -147,12 +148,12 @@ class ToInfluxBase(Task):
                 new_key = parent_key + sep + key
             else:
                 new_key = key
-            new_key = sanitize_string(new_key)
+            new_key = self.sanitize_string(new_key)
             if isinstance(value, dict):
                 if key == 'fields' and name:
                     for field_key, field_value in value.items():
                         new_field_key = f'{parent_key}{sep}{field_key}_{name}' if parent_key else f'{field_key}_{name}'
-                        new_field_key = sanitize_string(new_field_key)
+                        new_field_key = self.sanitize_string(new_field_key)
                         items.append((new_field_key, field_value))
                 else:
                     items.extend(self._flatten_telegraf_json(value, new_key, sep=sep).items())
@@ -161,7 +162,7 @@ class ToInfluxBase(Task):
                     if isinstance(v, dict):
                         items.extend(self._flatten_telegraf_json({f'{new_key}_{i}': v}, '', sep=sep).items())
                     else:
-                        items.append((sanitize_string(f'{new_key}_{i}'), v))
+                        items.append((self.sanitize_string(f'{new_key}_{i}'), v))
             else:
                 items.append((new_key, value))
         
