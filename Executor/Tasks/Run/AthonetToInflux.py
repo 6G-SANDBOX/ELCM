@@ -9,7 +9,6 @@ import time
 class AthonetToInflux(ToInfluxBase):
 
     def __init__(self, logMethod, parent, params):
-        
         super().__init__("ATHONET", parent, params, logMethod, None)
 
         self.paramRules = {
@@ -71,7 +70,7 @@ class AthonetToInflux(ToInfluxBase):
             try:
                 self._send_to_influx(measurement, data, timestamp, executionId)
             except Exception as e:
-                if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                if isinstance(e, influx.InfluxDBError) and e.response.status == 442:
                     self.Log(Level.WARNING, f"Warning (ATHONET): Unprocessable entity (422). Invalid data: {data}")
                 else:
                     self.Log(Level.ERROR, f"Failed to send data to InfluxDB (ATHONET). Exception: {e}")
@@ -106,44 +105,54 @@ class AthonetToInflux(ToInfluxBase):
                 else:
                     data_dict[timestamp][metric_name] = metric_value
 
-    def process_range_queries(self, prometheus, queries_range, start_time, end_time, step, data_dict):
-        for i, query in enumerate(queries_range):
-            try:
-                data = prometheus.custom_query_range(
-                    query=query,
-                    start_time=start_time,
-                    end_time=end_time,
-                    step=step
-                )
-                self.Log(Level.INFO, f"Range query executed successfully: {query}")
-                if data:
-                    self.store_query_data(data, query, data_dict)
-            except Exception as e:
-                self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
-                self.Log(Level.WARNING, "Try to reconnect.")
-                prometheus = self.reauthenticate_and_get_prometheus()
-                if not prometheus:
-                    self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
-                    return
-                self.Log(Level.WARNING, f"Retrying remaining queries from '{query}'.")
-                self.process_range_queries(prometheus, queries_range[i:], start_time, end_time, step, data_dict)
+    def process_range_queries(self, prometheus, queries_range, start_time, end_time, step, data_dict, max_retries=3):
+        for query in queries_range:
+            attempts = 0
+            while attempts < max_retries:
+                try:
+                    data = prometheus.custom_query_range(
+                        query=query,
+                        start_time=start_time,
+                        end_time=end_time,
+                        step=step
+                    )
+                    self.Log(Level.INFO, f"Range query executed successfully: {query}")
+                    if data:
+                        self.store_query_data(data, query, data_dict)
+                    break
+                except Exception as e:
+                    attempts += 1
+                    self.Log(Level.ERROR, f"Error executing range query '{query}', attempt {attempts}: {e}")
+                    if attempts < max_retries:
+                        self.Log(Level.WARNING, "Try to reconnect.")
+                        prometheus = self.reauthenticate_and_get_prometheus()
+                        if not prometheus:
+                            self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
+                            return
+                    else:
+                        self.Log(Level.ERROR, f"Max retries reached for query '{query}'. Skipping this query.")
 
-    def process_custom_queries(self, prometheus, queries_custom, data_dict):
-        for i, query in enumerate(queries_custom):
-            try:
-                data = prometheus.custom_query(query=query)
-                self.Log(Level.INFO, f"Custom query executed successfully: {query}")
-                if data:
-                    self.store_query_data(data, query, data_dict)
-            except Exception as e:
-                self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
-                self.Log(Level.WARNING, "Try to reconnect.")
-                prometheus = self.reauthenticate_and_get_prometheus()
-                if not prometheus:
-                    self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
-                    return
-                self.Log(Level.WARNING, f"Retrying remaining queries from '{query}'.")
-                self.process_custom_queries(prometheus, queries_custom[i:], data_dict)
+    def process_custom_queries(self, prometheus, queries_custom, data_dict, max_retries=3):
+        for query in queries_custom:
+            attempts = 0
+            while attempts < max_retries:
+                try:
+                    data = prometheus.custom_query(query=query)
+                    self.Log(Level.INFO, f"Custom query executed successfully: {query}")
+                    if data:
+                        self.store_query_data(data, query, data_dict)
+                    break
+                except Exception as e:
+                    attempts += 1
+                    self.Log(Level.ERROR, f"Error executing custom query '{query}', attempt {attempts}: {e}")
+                    if attempts < max_retries:
+                        self.Log(Level.WARNING, "Try to reconnect.")
+                        prometheus = self.reauthenticate_and_get_prometheus()
+                        if not prometheus:
+                            self.Log(Level.ERROR, "Could not reauthenticate with Prometheus. Exiting.")
+                            return
+                    else:
+                        self.Log(Level.ERROR, f"Max retries reached for query '{query}'. Skipping this query.")
 
     def init_prometheus_session(self):
         athonet_query_url = self.params['AthonetQueryUrl']
@@ -191,15 +200,11 @@ class AthonetToInflux(ToInfluxBase):
         self.Log(Level.INFO, "Connected to Prometheus")
 
         try:
-            
             if queries_range:
                 self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
-
             if queries_custom:
                 self.process_custom_queries(prometheus, queries_custom, data_dict)
-
             if data_dict:
                 self.send_data_to_influx(data_dict, measurement, executionId)
-
         except Exception:
             self.SetVerdictOnError()
