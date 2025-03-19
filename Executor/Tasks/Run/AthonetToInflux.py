@@ -3,7 +3,6 @@ from .to_influx import ToInfluxBase
 from Helper import Level, influx
 from datetime import datetime
 import requests
-import re
 import time
 
 class AthonetToInflux(ToInfluxBase):
@@ -113,9 +112,11 @@ class AthonetToInflux(ToInfluxBase):
                         end_time=end_time,
                         step=step
                     )
-                    self.Log(Level.INFO, f"Range query executed successfully: {query}")
                     if data:
+                        self.Log(Level.INFO, f"Range query executed successfully: {query}")
                         self.store_query_data(data, query, data_dict)
+                    else:
+                        self.Log(Level.WARNING, f"Range query was not executed successfully: {query}")
                     break
                 except Exception as e:
                     attempts += 1
@@ -135,9 +136,11 @@ class AthonetToInflux(ToInfluxBase):
             while attempts < max_retries:
                 try:
                     data = prometheus.custom_query(query=query)
-                    self.Log(Level.INFO, f"Custom query executed successfully: {query}")
                     if data:
+                        self.Log(Level.INFO, f"Custom query executed successfully: {query}")
                         self.store_query_data(data, query, data_dict)
+                    else:
+                        self.Log(Level.WARNING, f"Custom query was not executed successfully: {query}")
                     break
                 except Exception as e:
                     attempts += 1

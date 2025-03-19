@@ -55,23 +55,29 @@ class PrometheusToInflux(ToInfluxBase):
                     end_time=end_time,
                     step=step
                 )
-                self.Log(Level.INFO, f"Range query executed successfully: {query}")
                 if data:
+                    self.Log(Level.INFO, f"Range query executed successfully: {query}")
                     self.store_query_data(data, query, data_dict)
+                else:
+                    self.Log(Level.WARNING, f"Range query was not executed successfully: {query}")
+
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing range query '{query}': {e}")
-                raise RuntimeError(f"Error executing range query '{query}': {e}")
+                continue
 
     def process_custom_queries(self, prometheus, queries_custom, data_dict):
         for query in queries_custom:
             try:
                 data = prometheus.custom_query(query=query)
-                self.Log(Level.INFO, f"Custom query executed successfully: {query}")
                 if data:
+                    self.Log(Level.INFO, f"Custom query executed successfully: {query}")
                     self.store_query_data(data, query, data_dict)
+                else:
+                    self.Log(Level.WARNING, f"Custom query was not executed successfully: {query}")
+                    
             except Exception as e:
                 self.Log(Level.ERROR, f"Error executing custom query '{query}': {e}")
-                raise RuntimeError(f"Error executing custom query '{query}': {e}")
+                continue
 
     def store_query_data(self, data, query, data_dict):
         for result in data:
@@ -94,7 +100,7 @@ class PrometheusToInflux(ToInfluxBase):
             try:
                 self._send_to_influx(measurement, flat_data, timestamp, executionId)
             except Exception as e:
-                if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                if isinstance(e, influx.InfluxDBError) and e.response.status == 422:
                     self.Log(Level.WARNING, f"Warning (PROMETHEUS): Unprocessable entity (422). Invalid data: {data}")
                 else:
                     self.Log(Level.ERROR, f"Failed to send data to InfluxDB (PROMETHEUS). Exception: {e}")
@@ -142,17 +148,11 @@ class PrometheusToInflux(ToInfluxBase):
         # Process both range and custom queries
         data_dict = {}
 
-        try:
-            # Handle range queries if provided
-            if queries_range is not None:
-                self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
+        if queries_range is not None:
+            self.process_range_queries(prometheus, queries_range, start_time, end_time, step, data_dict)
 
-            # Handle custom queries if provided
-            if queries_custom is not None:
-                self.process_custom_queries(prometheus, queries_custom, data_dict)
+        if queries_custom is not None:
+            self.process_custom_queries(prometheus, queries_custom, data_dict)
 
-            # Send the data to InfluxDB if any queries were processed
-            if queries_range is not None or queries_custom is not None:
-                self.send_data_to_influx(data_dict, measurement, executionId)
-        except Exception:
-            self.SetVerdictOnError()
+        if queries_range is not None or queries_custom is not None:
+            self.send_data_to_influx(data_dict, measurement, executionId)
