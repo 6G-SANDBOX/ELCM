@@ -27,9 +27,6 @@ class AthonetToInflux(ToInfluxBase):
         self.access_token = None
         self.Log(Level.INFO, f"{self.name} initialized")
 
-    def sanitize_metric_name(self, name):
-        return re.sub(r'[^a-zA-Z0-9_]', '_', name).rstrip('_')
-
     def authenticate(self):
         login_url = self.params.get('AthonetLoginUrl')
         username = self.params.get('Username')
@@ -90,14 +87,14 @@ class AthonetToInflux(ToInfluxBase):
                 metric_type = result['metric'].get('type', None)
                 metric_cause = result['metric'].get('cause', None)
 
-                metric_name = self.sanitize_metric_name(metric_name)
+                metric_name = self.sanitize_string(metric_name)
                 
                 if metric_type:
-                    metric_type = self.sanitize_metric_name(metric_type)
+                    metric_type = self.sanitize_string(metric_type)
                     metric_name = f"{metric_name}_{metric_type}"
                 
                 if metric_cause:
-                    metric_cause = self.sanitize_metric_name(metric_cause)
+                    metric_cause = self.sanitize_string(metric_cause)
                     metric_name = f"{metric_name}_{metric_cause}"
 
                 if timestamp not in data_dict:
