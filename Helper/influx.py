@@ -393,6 +393,7 @@ class InfluxDb:
 
         headers = {
             "Authorization": f"Token {token}",
+            "Accept": "text/csv",
             "Content-Type": "application/vnd.flux"
         }
 
