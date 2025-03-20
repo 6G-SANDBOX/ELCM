@@ -12,5 +12,4 @@ urllib3~=2.2.3
 requests~=2.32.3
 influxdb-client~=1.46.0
 paramiko~=3.5.0
-kafka-python~=2.0.2 ; python_version < "3.12"
-kafka-python-ng~=2.2.0 ; python_version >= "3.12"
+kafka-python~=2.1.2
