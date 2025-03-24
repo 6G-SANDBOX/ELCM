@@ -37,14 +37,16 @@ class Parallel(Task):
             info.Thread = Thread(target=self.runChild, args=(info.TaskInstance,))
             children.append(info)
 
-            info.Thread.start()
-            self.Log(Level.DEBUG, f"Started branch {index}: {child.Label}")
+            if not self.parent.stopRequested:
+                info.Thread.start()
+                self.Log(Level.DEBUG, f"Started branch {index}: {child.Label}")
 
         for index, info in enumerate(children, start=1):
-            info.Thread.join()
-            self.parent.params.update(info.TaskInstance.Vault)  # Propagate any published values
-            self.Log(Level.DEBUG, f"Branch {index} ({info.TaskDefinition.Label}) joined")
-            self.Verdict = Verdict.Max(self.Verdict, info.TaskInstance.Verdict)
+            if info.Thread.is_alive():
+                info.Thread.join()
+                self.parent.params.update(info.TaskInstance.Vault)  # Propagate any published values
+                self.Log(Level.DEBUG, f"Branch {index} ({info.TaskDefinition.Label}) joined")
+                self.Verdict = Verdict.Max(self.Verdict, info.TaskInstance.Verdict)
 
         self.Log(Level.INFO, f"Finished execution of all child tasks")
 

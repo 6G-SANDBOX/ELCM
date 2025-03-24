@@ -20,4 +20,7 @@ class Delay(Task):
             return
 
         self.Log(Level.INFO, f'Waiting for {time} seconds')
-        sleep(time)
+        for _ in range(time):
+            sleep(1)
+            if self.parent.stopRequested:
+                break

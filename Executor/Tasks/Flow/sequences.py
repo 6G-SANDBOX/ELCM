@@ -28,8 +28,9 @@ class SequenceBase(Task):
             self.Log, self.parent, Expander.ExpandDict(child.Params, self.parent, flowState))
         taskInstance.Label = f'{labelPrefix}.{taskInstance.Label}' if taskInstance.Label is not None else labelPrefix
         try:
-            taskInstance.Start()
-            self.parent.params.update(taskInstance.Vault)  # Propagate any published values
+            if not self.parent.stopRequested:
+                taskInstance.Start()
+                self.parent.params.update(taskInstance.Vault)  # Propagate any published values
         except Exception as e:
             taskInstance.Verdict = Verdict.Error
             self.Log(Level.ERROR, str(e))

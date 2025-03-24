@@ -106,7 +106,7 @@ class MqttToInflux(ToInfluxBase):
         client.loop_start()
         
         # Main loop to check for a stop signal from the control queue
-        while not self.parent.ReadMilestone(stop):
+        while not self.parent.ReadMilestone(stop) and not self.parent.stopRequested:
             time.sleep(1)
         # Stop the MQTT client's network loop and disconnect
         client.loop_stop()
