@@ -88,7 +88,7 @@ class KafkaConsumerToInflux(ToInfluxBase):
             return
 
         # Main loop for processing Kafka messages
-        while not self.parent.ReadMilestone(stop):
+        while not self.parent.ReadMilestone(stop) and not self.parent.stopRequested:
             # Consume messages from Kafka and send them to InfluxDB
             for message in consumer:
                 try:

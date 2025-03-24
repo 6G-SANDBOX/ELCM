@@ -190,7 +190,7 @@ class TelegrafToInflux(ToInfluxBase):
         tcp_thread = threading.Thread(target=self.tcp_handler, args=(stop_event,))
         tcp_thread.start()
 
-        while not self.parent.ReadMilestone(stop):
+        while not self.parent.ReadMilestone(stop) and not self.parent.stopRequested:
             time.sleep(1)
 
         stop_event.set()

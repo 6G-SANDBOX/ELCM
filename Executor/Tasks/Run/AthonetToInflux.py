@@ -180,7 +180,7 @@ class AthonetToInflux(ToInfluxBase):
         step = self.params['Step']
         measurement = self.params['Measurement']
 
-        while not self.parent.ReadMilestone(stop):
+        while not self.parent.ReadMilestone(stop) and not self.parent.stopRequested:
             time.sleep(1)
         end_time = datetime.now()
 
