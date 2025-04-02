@@ -37,7 +37,7 @@ class Parallel(Task):
             info.Thread = Thread(target=self.runChild, args=(info.TaskInstance,))
             children.append(info)
 
-            if not self.parent.stopRequested or (self.parent.stopRequested and child.Params.get("NoStop", False)):
+            if (not self.parent.stopRequested) or (self.parent.stopRequested and (child.Params.get("NoStop", False) is True)):
                 info.Thread.start()
                 self.Log(Level.DEBUG, f"Started branch {index}: {child.Label}")
 
