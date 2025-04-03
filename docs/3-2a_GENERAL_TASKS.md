@@ -482,6 +482,7 @@ This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV 
 - `User` (optional): Username for authenticating with InfluxDB v1.x.
 - `Password` (optional): Password associated with the InfluxDB v1.x user.
 - `Token` (optional): Authentication token for accessing InfluxDB v2.x.
+- `Org` (optional): InfluxDB organization name used for v2.x queries. If not provided, the default configured org is used.
 
 **YAML Configuration Example**:
 ```yaml
@@ -493,12 +494,13 @@ Sequence:
     Config:
       ExecutionId: "@{ExecutionId}"        # Unique execution ID
       Measurement: "sensor_data"           # Required measurement
-      Host: "localhost2"                # Optional host override
+      Host: "localhost2"                   # Optional host override
       Port: 8086                           # Optional port override
       Database: "my_database"              # Optional database (v1.x) or bucket (v2.x)
       User: "admin"                        # Optional for v1.x
       Password: "secret"                   # Optional for v1.x
       Token: "my-secret-token"             # Optional for v2.x
+      Org: "my-org-name"                   # Optional for v2.x
 ```
 
 ## Run.EmailFiles

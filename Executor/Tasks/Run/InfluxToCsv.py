@@ -13,7 +13,8 @@ class InfluxToCsv(Task):
             'Host': (None, False),
             'Port': (None, False),
             'Database': (None, False),
-            'Measurement': (None, True)
+            'Measurement': (None, True),
+            'Org': (None, False)
         }
 
     def Run(self):
@@ -31,6 +32,7 @@ class InfluxToCsv(Task):
         user = self.params.get('User') or config.InfluxDb.User
         database = self.params.get('Database') or config.InfluxDb.Database
         measurement = self.params.get('Measurement')
+        org = self.params.get('Org') or config.InfluxDb.Org
 
         common_params = {
             "influx_dir": influx_dir,
@@ -51,7 +53,7 @@ class InfluxToCsv(Task):
                 **common_params,
                 bucket=database,
                 token=token,
-                org=config.InfluxDb.Org
+                org=org
             )
         else:
             self.Log(Level.ERROR, "Invalid InfluxDB version. Must be '1' or '2'.")
