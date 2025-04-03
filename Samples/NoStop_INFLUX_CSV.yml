@@ -33,7 +33,7 @@ Sequence:
       User: admin2
       Password: adminpassword2
       Token: your-v2-auth-token
-      Org: "my-org-name"
+      Org: my-org-name
   - Order: 3
     Task: Run.InfluxToCsv
     Config:
