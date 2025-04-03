@@ -13,6 +13,8 @@ import requests
 import enum
 from Helper import Log
 import os
+import pandas as pd
+from dateutil.parser import isoparse
 
 class BatchingCallback(object):
 
@@ -218,16 +220,27 @@ class InfluxDb:
 
     @classmethod
     def CsvToPayload(cls, measurement: str, csvFile: str, delimiter: str, timestampKey: str,
-                     tryConvert: bool = True, keysToRemove: List[str] = None) -> InfluxPayload:
+                    tryConvert: bool = True, keysToRemove: List[str] = None) -> InfluxPayload:
         def _convert(value: str) -> Union[int, float, bool, str]:
-
             try:
                 return float(value)
             except ValueError:
                 pass
-
             return {'true': True, 'false': False}.get(value.lower(), value)
 
+        def parse_timestamp(timestamp_str: str) -> datetime:
+            try:
+                ts = float(timestamp_str)
+            except ValueError:
+                raise RuntimeError(f"Invalid timestamp: {timestamp_str}")
+
+            if ts > 1e17:  
+                return datetime.fromtimestamp(ts / 1e9, tz=timezone.utc)
+            elif ts > 1e12:  
+                return datetime.fromtimestamp(ts / 1e3, tz=timezone.utc)
+            else:  
+                return datetime.fromtimestamp(ts, tz=timezone.utc)
+            
         keysToRemove = [] if keysToRemove is None else keysToRemove
 
         with open(csvFile, 'r', encoding='utf-8', newline='') as file:
@@ -236,7 +249,7 @@ class InfluxDb:
 
             if timestampKey not in keys:
                 raise RuntimeError(f"CSV file does not seem to contain timestamp ('{timestampKey}') values. "
-                                   f"Keys in file: {keys}")
+                                f"Keys in file: {keys}")
 
             dialect = baseDialect()
             dialect.delimiter = str(delimiter.strip())
@@ -245,12 +258,15 @@ class InfluxDb:
             payload = InfluxPayload(measurement)
 
             for row in csv:
-                timestampValue = float(row.pop(timestampKey))
+                timestamp_str = row.pop(timestampKey)
+
                 try:
-                    timestamp = datetime.fromtimestamp(timestampValue, tz=timezone.utc)
-                except (OSError, ValueError):
-                    # value outside of bounds, maybe because it's specified in milliseconds instead of seconds
-                    timestamp = datetime.fromtimestamp(timestampValue / 1000.0, tz=timezone.utc)
+                    timestamp = parse_timestamp(timestamp_str)
+                except Exception:
+                    try:
+                        timestamp = isoparse(timestamp_str)
+                    except Exception as e:
+                        raise RuntimeError(f"Error parsing timestamp: {timestamp_str}") from e
 
                 point = InfluxPoint(timestamp)
                 for key, value in row.items():
@@ -362,12 +378,12 @@ class InfluxDb:
 
         return res
     
-    def export_influxdb_v1(influx_dir, database, execution_id, url, user, password):
-        output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
+    def export_influxdb_v1(influx_dir, database, execution_id, url, user, password, measurement):
+        output_file = os.path.join(influx_dir, f"csv_{measurement}_{execution_id}.csv")
 
         query_params = {
             "db": database,
-            "q": f'SELECT * FROM /.*/ WHERE "ExecutionId" = \'{execution_id}\''
+            "q": f'SELECT * FROM "{measurement}" WHERE "ExecutionId" = \'{execution_id}\''
         }
         headers = {"Accept": "application/csv"}
 
@@ -375,21 +391,23 @@ class InfluxDb:
             response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
             response.raise_for_status()
 
-            with open(output_file, "w",encoding="utf-8") as f:
+            with open(output_file, "w", encoding="utf-8", newline='') as f:
                 f.write(response.text)
 
             Log.I(f"Data successfully exported to {output_file} from InfluxDB v1.x")
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v1.x: {e}")
 
-    def export_influxdb_v2(influx_dir, bucket, token, org, execution_id, url):
-        output_file = os.path.join(influx_dir, f"csv_{execution_id}.csv")
+    def export_influxdb_v2(influx_dir, bucket, token, org, execution_id, url, measurement):
+        output_file = os.path.join(influx_dir, f"csv_{measurement}_{execution_id}.csv")
 
-        flux_query = f"""
+        flux_query = f'''
         from(bucket: "{bucket}")
         |> range(start: 0)
+        |> filter(fn: (r) => r["_measurement"] == "{measurement}")
         |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
-        """
+        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+        '''
 
         headers = {
             "Authorization": f"Token {token}",
@@ -401,10 +419,28 @@ class InfluxDb:
             response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
             response.raise_for_status()
 
-            with open(output_file, "w",encoding="utf-8") as f:
+            if not response.text.strip():
+                Log.I("InfluxDB returned an empty response. No data to write.")
+                return
+
+            with open(output_file, "w", encoding="utf-8", newline='') as f:
                 f.write(response.text)
 
-            Log.I(f"Data successfully exported to {output_file} from InfluxDB v2.x")
+            if os.path.getsize(output_file) == 0:
+                Log.I("CSV file is empty after saving. Skipping parsing.")
+                return
+
+            df = pd.read_csv(output_file)
+
+            df.dropna(axis=1, how='all', inplace=True)
+
+            columns_to_drop = ["_start", "_stop", "result", "table"]
+            df.drop(columns=[col for col in columns_to_drop if col in df.columns], inplace=True)
+
+            df.to_csv(output_file, index=False)
+
+            Log.I(f"Data successfully exported and processed to {output_file} from InfluxDB v2.x")
+
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v2.x: {e}")
 

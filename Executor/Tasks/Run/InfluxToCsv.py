@@ -12,7 +12,8 @@ class InfluxToCsv(Task):
             'User': (None, False),
             'Url': (None, False),
             'Port': (None, False),
-            'Database': (None, False)
+            'Database': (None, False),
+            'Measurement': (None, True)
         }
 
     def Run(self):
@@ -29,11 +30,13 @@ class InfluxToCsv(Task):
         password = self.params.get('Password') or config.InfluxDb.Password
         user = self.params.get('User') or config.InfluxDb.User
         database = self.params.get('Database') or config.InfluxDb.Database
+        measurement = self.params.get('Measurement')
 
         common_params = {
             "influx_dir": influx_dir,
             "execution_id": execution_id,
-            "url": url
+            "url": url,
+            "measurement": measurement
         }
 
         if version == influx.Versions.V1:
