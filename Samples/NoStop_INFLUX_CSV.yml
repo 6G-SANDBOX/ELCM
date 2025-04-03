@@ -48,7 +48,7 @@ Sequence:
       Measurement: "SensorData"
       Delimiter: ","
       Timestamp: "_time"
-      Convert: true
+      Convert: True
       NoStop: True
 Standard: True
 Dashboard:
