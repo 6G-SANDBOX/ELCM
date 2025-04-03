@@ -475,6 +475,13 @@ This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV 
 
 **Configuration Parameters**:
 - `ExecutionId` (required): The unique identifier for the execution, used to filter data.
+- `Measurement` (required): The name of the measurement to export data from.
+- `Host` (optional): InfluxDB server host.
+- `Port` (optional): InfluxDB server port.
+- `Database` (optional): Database name (for InfluxDB v1.x) or bucket name (for InfluxDB v2.x).
+- `User` (optional): Username for authenticating with InfluxDB v1.x.
+- `Password` (optional): Password associated with the InfluxDB v1.x user.
+- `Token` (optional): Authentication token for accessing InfluxDB v2.x.
 
 **YAML Configuration Example**:
 ```yaml
@@ -485,6 +492,13 @@ Sequence:
     Task: Run.InfluxToCsv
     Config:
       ExecutionId: "@{ExecutionId}"        # Unique execution ID
+      Measurement: "sensor_data"           # Required measurement
+      Host: "localhost2"                # Optional host override
+      Port: 8086                           # Optional port override
+      Database: "my_database"              # Optional database (v1.x) or bucket (v2.x)
+      User: "admin"                        # Optional for v1.x
+      Password: "secret"                   # Optional for v1.x
+      Token: "my-secret-token"             # Optional for v2.x
 ```
 
 ## Run.EmailFiles

@@ -10,7 +10,7 @@ class InfluxToCsv(Task):
             'Token': (None, False),
             'Password': (None, False),
             'User': (None, False),
-            'Url': (None, False),
+            'Host': (None, False),
             'Port': (None, False),
             'Database': (None, False),
             'Measurement': (None, True)
@@ -19,7 +19,7 @@ class InfluxToCsv(Task):
     def Run(self):
         config = Config()
 
-        host = self.params.get('Url') or config.InfluxDb.Host
+        host = self.params.get('Host') or config.InfluxDb.Host
         port = self.params.get('Port') or config.InfluxDb.Port
         url = f"http://{host}:{port}"
         version = influx.InfluxDb.detectInfluxDBVersion(url)
