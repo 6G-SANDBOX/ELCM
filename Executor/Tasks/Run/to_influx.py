@@ -15,7 +15,7 @@ class ToInfluxBase(Task):
 
     @staticmethod
     def sanitize_string(name: str) -> str:
-        return re.sub(r'[^a-zA-Z0-9_]', '_', name).rstrip('_')
+        return re.sub(r'[^a-zA-Z0-9_]', '_', name)
 
     def _convert(self, value: Any) -> Union[int, float, bool, str, Dict[str, Any]]:
         if isinstance(value, str):

@@ -47,7 +47,7 @@ class TelegrafToInflux(ToInfluxBase):
         try:
             self._send_to_influx(measurement, flattened_data, timestamp, self.executionId)
         except Exception as e:
-            if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+            if isinstance(e, influx.InfluxDBError) and e.response.status == 422:
                 self.Log(Level.WARNING, f"Warning (TELEGRAF): Unprocessable entity (422). Invalid data: {data}")
             else:
                 self.Log(Level.ERROR, f"Failed to send data to InfluxDB (TELEGRAF). Exception: {e}")

@@ -283,6 +283,7 @@ This task subscribes to an MQTT topic, processes received messages, and sends th
 - `Stop` (required): Signal to stop message processing.
 - `Measurement` (required): InfluxDB measurement name where data will be sent.
 - `Certificates` (optional): Path to SSL/TLS certificate files, needed if encryption is used.
+- `Timestamp` (optional): The name of the timestamp field for the metrics.
 - `Encryption` (required): Flag indicating whether SSL/TLS encryption is used (`True` or `False`).
 
 **Encryption**:

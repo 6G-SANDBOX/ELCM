@@ -109,7 +109,7 @@ class KafkaConsumerToInflux(ToInfluxBase):
                         self._send_to_influx_CSV(measurement,csv_data,executionId)
                     break        
                 except Exception as e:
-                    if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                    if isinstance(e, influx.InfluxDBError) and e.response.status == 422:
                         self.Log(Level.WARNING, f"Warning (KAFKA): Unprocessable entity (422). Invalid data: {data}")
                     else:
                         self.Log(Level.ERROR, f"Failed to send data to InfluxDB (KAFKA). Exception: {e}")

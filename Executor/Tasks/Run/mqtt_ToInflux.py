@@ -12,7 +12,7 @@ class MqttToInflux(ToInfluxBase):
         super().__init__("MQTT", parent, params, logMethod, None)
         # Define the rules for expected parameters, including which are mandatory
         self.paramRules = {
-            'ExecutionId': (None, True),   # Unique ID for execution, required
+            'ExecutionId': (None, True),    # Unique ID for execution, required
             'Broker': (None, True),         # MQTT broker address, required
             'Port': (None, True),           # MQTT broker port, required
             'Account': (False, True),       # Account for authentication, required
@@ -20,15 +20,17 @@ class MqttToInflux(ToInfluxBase):
             'Stop': (None, True),           # Stop signal key, required
             'Measurement': (None, True),    # InfluxDB measurement name, required
             'Certificates': (None, False),  # Path to SSL certificates, optional
-            'Encryption': (False, True)     # Flag for using SSL/TLS, required
+            'Encryption': (False, True),    # Flag for using SSL/TLS, required
+            'Timestamp': ('timestamp', False)   # Timestamp
         }
 
     def save_to_influx(self, message):
         # Decode and parse the MQTT message payload
         data = json.loads(message.payload.decode('utf-8'))
         measurement = self.params['Measurement']
+        timestamp_init= self.params.get("Timestamp")
         # Flatten the data before sending to InfluxDB
-        flattened_data = self._flatten_json(data)
+        flattened_data = self._flatten_json(data,timestamp_key=timestamp_init)
 
         for key, value, timestamp in flattened_data:
             
@@ -38,7 +40,7 @@ class MqttToInflux(ToInfluxBase):
                 # Send the flattened data to InfluxDB
                 self._send_to_influx(measurement, measurement_data, timestamp, self.params['ExecutionId'])
             except Exception as e:
-                if isinstance(e, influx.InfluxDBError) and e.response.status==442:
+                if isinstance(e, influx.InfluxDBError) and e.response.status == 422:
                     self.Log(Level.WARNING, f"Warning (MQTT): Unprocessable entity (422). Invalid data: {data}")
                 else:
                     self.Log(Level.ERROR, f"Failed to send data to InfluxDB (MQTT). Exception: {e}")
