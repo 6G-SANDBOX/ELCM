@@ -185,20 +185,17 @@ class InfluxDb:
 
             callback = cls.thread_callbacks.get_callback()
 
-            try:
-                if cls.version == Versions.V1:
-                    cls._thread_local.client.write_points(payload.Serialized)
-                elif cls.version == Versions.V2:
-                    write_api = cls._thread_local.client.write_api(error_callback=callback.error)
-                    write_api.write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
-                    write_api.__del__()
-                if callback.last_error:
-                    tmp = callback.last_error
-                    callback.last_error = None
-                    raise InfluxDBError(tmp.response)
-            except Exception as e:
+            if cls.version == Versions.V1:
+                cls._thread_local.client.write_points(payload.Serialized)
+            elif cls.version == Versions.V2:
+                write_api = cls._thread_local.client.write_api(error_callback=callback.error)
+                write_api.write(bucket=cls.database, org=Config().InfluxDb.Org, record=payload.Serialized)
+                write_api.close()
+            if callback.last_error:
+                tmp = callback.last_error
+                callback.last_error = None
                 cls.cleanup()
-                raise RuntimeError(f"Error sending payload: {e}")
+                raise InfluxDBError(tmp.response) 
 
     @classmethod
     def PayloadToCsv(cls, payload: InfluxPayload, outputFile: str):
