@@ -144,8 +144,17 @@ def upload_test_case():
 
 @bp.route('/testcases/info')
 def facilityTestCasesInfo():
-    result = {
+    testcases = {
         name: [str(entry) for entry in entries]
         for name, entries in Facility.testCases.items()
     }
-    return jsonify({"TestCases": result})
+
+    ues = {
+        name: [str(entry) for entry in entries]
+        for name, entries in Facility.ues.items()
+    }
+
+    return jsonify({
+        "TestCases": testcases,
+        "UEs": ues
+    })
