@@ -6,6 +6,7 @@ from typing import Dict
 import os
 from flask import request
 import yaml
+from typing import Dict, List
 
 @bp.route('/resource_status')
 def resourceStatus():
@@ -142,19 +143,40 @@ def upload_test_case():
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {str(e)}"}), 500
 
+
+def convert_to_dict(obj):
+    """Recursively convert an object to a serializable dictionary."""
+    if isinstance(obj, list):
+        return [convert_to_dict(item) for item in obj]
+    elif hasattr(obj, '__dict__'):
+        return {key: convert_to_dict(value) for key, value in vars(obj).items()}
+    else:
+        return obj
+
+def serialize_entries(source: Dict[str, List[object]]) -> Dict[str, List[str]]:
+    result = {}
+    for name, entries in source.items():
+        yaml_entries = []
+        for entry in entries:
+            clean = convert_to_dict(entry)
+
+            if isinstance(clean, dict) and "influx_config" in clean:
+                del clean["influx_config"]
+
+            dumped = yaml.dump(clean, sort_keys=False, allow_unicode=True)
+            yaml_entries.append(dumped)
+        result[name] = yaml_entries
+    return result
+
+
 @bp.route('/testcases/info')
 def facilityTestCasesInfo():
-    testcases = {
-        name: [str(entry) for entry in entries]
-        for name, entries in Facility.testCases.items()
-    }
-
-    ues = {
-        name: [str(entry) for entry in entries]
-        for name, entries in Facility.ues.items()
-    }
+    testcases = serialize_entries(Facility.testCases)
+    ues = serialize_entries(Facility.ues)
+    dashboards = serialize_entries(Facility.dashboards)
 
     return jsonify({
         "TestCases": testcases,
-        "UEs": ues
+        "UEs": ues,
+        "Dashboards": dashboards
     })
