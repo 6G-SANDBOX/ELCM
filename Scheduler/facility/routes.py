@@ -141,3 +141,11 @@ def upload_test_case():
         })
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {str(e)}"}), 500
+
+@bp.route('/testcases/info')
+def facilityTestCasesInfo():
+    result = {
+        name: [str(entry) for entry in entries]
+        for name, entries in Facility.testCases.items()
+    }
+    return jsonify({"TestCases": result})
