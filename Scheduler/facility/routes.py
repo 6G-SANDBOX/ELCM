@@ -153,30 +153,23 @@ def convert_to_dict(obj):
     else:
         return obj
 
-def serialize_entries(source: Dict[str, List[object]]) -> Dict[str, List[str]]:
-    result = {}
-    for name, entries in source.items():
-        yaml_entries = []
-        for entry in entries:
-            clean = convert_to_dict(entry)
-
-            if isinstance(clean, dict) and "influx_config" in clean:
-                del clean["influx_config"]
-
-            dumped = yaml.dump(clean, sort_keys=False, allow_unicode=True)
-            yaml_entries.append(dumped)
-        result[name] = yaml_entries
-    return result
-
-
-@bp.route('/testcases/info')
+@bp.route('/testcases/info', methods=['POST'])
 def facilityTestCasesInfo():
-    testcases = serialize_entries(Facility.testCases)
-    ues = serialize_entries(Facility.ues)
-    dashboards = serialize_entries(Facility.dashboards)
+    data = request.get_json()
+    requested_testcases = set(data.get("TestCases", []))
+    requested_ues = set(data.get("UEs", []))
+
+    def serialize_selected(source: Dict[str, List[object]], keys: set) -> Dict[str, List[str]]:
+        return {
+            name: [
+                yaml.dump({k: v for k, v in convert_to_dict(e).items() if k != "influx_config"}, sort_keys=False, allow_unicode=True)
+                for e in source[name]
+            ]
+            for name in keys if name in source
+        }
 
     return jsonify({
-        "TestCases": testcases,
-        "UEs": ues,
-        "Dashboards": dashboards
+        "TestCases": serialize_selected(Facility.testCases, requested_testcases),
+        "UEs": serialize_selected(Facility.ues, requested_ues),
+        "Dashboards": serialize_selected(Facility.dashboards, requested_testcases)
     })
