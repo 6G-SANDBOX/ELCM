@@ -6,6 +6,7 @@ from typing import Dict
 import os
 from flask import request
 import yaml
+from typing import Dict, List
 
 @bp.route('/resource_status')
 def resourceStatus():
@@ -141,3 +142,34 @@ def upload_test_case():
         })
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {str(e)}"}), 500
+
+
+def convert_to_dict(obj):
+    """Recursively convert an object to a serializable dictionary."""
+    if isinstance(obj, list):
+        return [convert_to_dict(item) for item in obj]
+    elif hasattr(obj, '__dict__'):
+        return {key: convert_to_dict(value) for key, value in vars(obj).items()}
+    else:
+        return obj
+
+@bp.route('/testcases/info', methods=['POST'])
+def facilityTestCasesInfo():
+    data = request.get_json()
+    requested_testcases = set(data.get("TestCases", []))
+    requested_ues = set(data.get("UEs", []))
+
+    def serialize_selected(source: Dict[str, List[object]], keys: set) -> Dict[str, List[str]]:
+        return {
+            name: [
+                yaml.dump({k: v for k, v in convert_to_dict(e).items() if k != "influx_config"}, sort_keys=False, allow_unicode=True)
+                for e in source[name]
+            ]
+            for name in keys if name in source
+        }
+
+    return jsonify({
+        "TestCases": serialize_selected(Facility.testCases, requested_testcases),
+        "UEs": serialize_selected(Facility.ues, requested_ues),
+        "Dashboards": serialize_selected(Facility.dashboards, requested_testcases)
+    })
