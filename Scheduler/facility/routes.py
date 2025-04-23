@@ -90,13 +90,12 @@ def deleteTestCase():
                 except yaml.YAMLError:
                     continue  
 
-                if isinstance(data, dict):
-                    if data.get("Version") == 2 and data.get("Name") == test_case_name:
-                        os.remove(file_path)
-                        deleted_files.append(filename)
-                    elif test_case_name in data:
-                        os.remove(file_path)
-                        deleted_files.append(filename)
+                if isinstance(data, dict) and (
+                    data.get("Name") == test_case_name
+                    or test_case_name in data
+                ):
+                    os.remove(file_path)
+                    deleted_files.append(filename)
 
         if not deleted_files:
             return jsonify({"success": False, "message": f"{file_type} {test_case_name} file was not found"}), 404
@@ -117,60 +116,63 @@ def upload_test_case():
     uploaded = request.files.get('test_case')
     file_type = request.form.get('file_type', 'testcase')
 
+    # 1) Basic validations
     if not uploaded:
         return jsonify({"success": False, "message": "No file received"}), 400
     if not uploaded.filename.lower().endswith('.yml'):
-        return jsonify({"success": False, "message": "Invalid file extension. Only .yml allowed."}), 400
+        return jsonify({"success": False, "message": "Only .yml files are allowed"}), 400
 
-    # Determine destination folder
-    if file_type == 'ues':
-        folder = Facility.UE_FOLDER
-    else:
-        folder = Facility.TESTCASE_FOLDER
+    # 2) Choose destination folder
+    folder = Facility.UE_FOLDER if file_type == 'ues' else Facility.TESTCASE_FOLDER
 
-    # 1) Read the YAML content to extract the internal Name field
+    # 3) Read the YAML content to extract the internal name
     try:
-        raw_bytes = uploaded.read()
-        data = yaml.safe_load(raw_bytes)
+        content = uploaded.read()
+        data = yaml.safe_load(content)
     except Exception as e:
         return jsonify({"success": False, "message": f"Invalid YAML: {e}"}), 400
 
-    # Reset the stream position so we can save the file later
+    # Reset stream for saving the file later
     uploaded.stream.seek(0)
 
-    # Extract the internal name
-    if isinstance(data, dict) and data.get("Version") == 2 and "Name" in data:
-        name = data["Name"]
+    # 4) Determine internal name:
+    if isinstance(data, dict) and "Name" in data:
+        internal_name = data["Name"]
     elif isinstance(data, dict):
-        # Fallback to the first root key
-        name = next(iter(data.keys()))
+        internal_name = next(iter(data.keys()))
     else:
-        return jsonify({"success": False, "message": "YAML does not contain a valid mapping"}), 400
+        return jsonify({
+            "success": False,
+            "message": "YAML must be a mapping with a 'Name' field or a root key"
+        }), 400
 
-    # 2) Remove any existing files with the same internal Name
-    for fn in os.listdir(folder):
-        if not fn.lower().endswith('.yml'):
+    # 5) Remove any existing .yml files with that same internal name
+    for filename in os.listdir(folder):
+        if not filename.lower().endswith('.yml'):
             continue
-        path = os.path.join(folder, fn)
+        path = os.path.join(folder, filename)
         try:
-            existing = yaml.safe_load(open(path, encoding='utf-8'))
+            with open(path, encoding='utf-8') as f:
+                existing = yaml.safe_load(f)
         except Exception:
             continue
+
         if isinstance(existing, dict) and (
-            (existing.get("Version") == 2 and existing.get("Name") == name)
-            or name in existing
+            existing.get("Name") == internal_name
+            or internal_name in existing
         ):
             os.remove(path)
 
-    # 3) Save the new file using the original filename
+    # 6) Save the new file using its original filename
     save_path = os.path.join(folder, uploaded.filename)
     try:
         uploaded.save(save_path)
         Facility.Reload()
         return jsonify({
             "success": True,
-            "message": f"{'UEs' if file_type == 'ues' else 'Test case'} '{uploaded.filename}' uploaded successfully"
-        })
+            "message": f"{'UEs' if file_type == 'ues' else 'Test case'} "
+                       f"'{uploaded.filename}' uploaded successfully"
+        }), 200
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
 
@@ -204,9 +206,8 @@ def facilityTestCasesInfo():
                     data = yaml.safe_load(open(path, encoding="utf-8"))
                 except Exception:
                     continue
-                if (isinstance(data, dict) and
-                    ((data.get("Version") == 2 and data.get("Name") == name)
-                     or name in data)):
+
+                if isinstance(data, dict) and (data.get("Name") == name or name in data):
                     try:
                         raw_versions.append(open(path, encoding="utf-8").read())
                     except Exception:
