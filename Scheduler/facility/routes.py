@@ -114,34 +114,65 @@ def deleteTestCase():
 
 @bp.route('/upload_test_case', methods=['POST'])
 def upload_test_case():
-    file = request.files.get('test_case')
+    uploaded = request.files.get('test_case')
     file_type = request.form.get('file_type', 'testcase')
 
-    if not file:
+    if not uploaded:
         return jsonify({"success": False, "message": "No file received"}), 400
-    
-    if not file.filename.lower().endswith('.yml'):
+    if not uploaded.filename.lower().endswith('.yml'):
         return jsonify({"success": False, "message": "Invalid file extension. Only .yml allowed."}), 400
-    
+
+    # Determine destination folder
     if file_type == 'ues':
-        save_folder = Facility.UE_FOLDER
+        folder = Facility.UE_FOLDER
     else:
-        save_folder = Facility.TESTCASE_FOLDER
+        folder = Facility.TESTCASE_FOLDER
 
-    save_path = os.path.join(save_folder, file.filename)
-
-    if os.path.exists(save_path):
-        return jsonify({"success": False, "message": f"File {file.filename} already exists."}), 400
-
+    # 1) Read the YAML content to extract the internal Name field
     try:
-        file.save(save_path)
+        raw_bytes = uploaded.read()
+        data = yaml.safe_load(raw_bytes)
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Invalid YAML: {e}"}), 400
+
+    # Reset the stream position so we can save the file later
+    uploaded.stream.seek(0)
+
+    # Extract the internal name
+    if isinstance(data, dict) and data.get("Version") == 2 and "Name" in data:
+        name = data["Name"]
+    elif isinstance(data, dict):
+        # Fallback to the first root key
+        name = next(iter(data.keys()))
+    else:
+        return jsonify({"success": False, "message": "YAML does not contain a valid mapping"}), 400
+
+    # 2) Remove any existing files with the same internal Name
+    for fn in os.listdir(folder):
+        if not fn.lower().endswith('.yml'):
+            continue
+        path = os.path.join(folder, fn)
+        try:
+            existing = yaml.safe_load(open(path, encoding='utf-8'))
+        except Exception:
+            continue
+        if isinstance(existing, dict) and (
+            (existing.get("Version") == 2 and existing.get("Name") == name)
+            or name in existing
+        ):
+            os.remove(path)
+
+    # 3) Save the new file using the original filename
+    save_path = os.path.join(folder, uploaded.filename)
+    try:
+        uploaded.save(save_path)
         Facility.Reload()
         return jsonify({
             "success": True,
-            "message": f"{'UEs' if file_type == 'ues' else 'Test case'} {file.filename} uploaded successfully"
+            "message": f"{'UEs' if file_type == 'ues' else 'Test case'} '{uploaded.filename}' uploaded successfully"
         })
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error saving file: {str(e)}"}), 500
+        return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
 
 
 def convert_to_dict(obj):
@@ -159,17 +190,35 @@ def facilityTestCasesInfo():
     requested_testcases = set(data.get("TestCases", []))
     requested_ues = set(data.get("UEs", []))
 
-    def serialize_selected(source: Dict[str, List[object]], keys: set) -> Dict[str, List[str]]:
-        return {
-            name: [
-                yaml.dump({k: v for k, v in convert_to_dict(e).items() if k != "influx_config"}, sort_keys=False, allow_unicode=True)
-                for e in source[name]
-            ]
-            for name in keys if name in source
-        }
+    def load_raw(folder: str, index: Dict[str, object], names: set) -> Dict[str, List[str]]:
+        out = {}
+        for name in names:
+            if name not in index:
+                continue
+            raw_versions = []
+            for fn in os.listdir(folder):
+                if not fn.lower().endswith(".yml"):
+                    continue
+                path = os.path.join(folder, fn)
+                try:
+                    data = yaml.safe_load(open(path, encoding="utf-8"))
+                except Exception:
+                    continue
+                if (isinstance(data, dict) and
+                    ((data.get("Version") == 2 and data.get("Name") == name)
+                     or name in data)):
+                    try:
+                        raw_versions.append(open(path, encoding="utf-8").read())
+                    except Exception:
+                        continue
+            if raw_versions:
+                out[name] = raw_versions
+        return out
+
+    testcases_raw = load_raw(Facility.TESTCASE_FOLDER, Facility.testCases, requested_testcases)
+    ues_raw       = load_raw(Facility.UE_FOLDER,      Facility.ues,      requested_ues)
 
     return jsonify({
-        "TestCases": serialize_selected(Facility.testCases, requested_testcases),
-        "UEs": serialize_selected(Facility.ues, requested_ues),
-        "Dashboards": serialize_selected(Facility.dashboards, requested_testcases)
+        "TestCases": testcases_raw,
+        "UEs":       ues_raw
     })
