@@ -113,7 +113,7 @@ def deleteTestCase():
 
 @bp.route('/upload_test_case', methods=['POST'])
 def upload_test_case():
-    uploaded = request.files.get('test_case')
+    uploaded  = request.files.get('test_case')
     file_type = request.form.get('file_type', 'testcase')
 
     # 1) Basic validations
@@ -122,20 +122,22 @@ def upload_test_case():
     if not uploaded.filename.lower().endswith('.yml'):
         return jsonify({"success": False, "message": "Only .yml files are allowed"}), 400
 
-    # 2) Choose destination folder
+    # 2) Determine destination folder
     folder = Facility.UE_FOLDER if file_type == 'ues' else Facility.TESTCASE_FOLDER
 
-    # 3) Read the YAML content to extract the internal name
+    # 3) Read the uploaded YAML to extract the internal name
     try:
         content = uploaded.read()
         data = yaml.safe_load(content)
     except Exception as e:
         return jsonify({"success": False, "message": f"Invalid YAML: {e}"}), 400
 
-    # Reset stream for saving the file later
+    # 4) Reset stream position for saving the file later
     uploaded.stream.seek(0)
 
-    # 4) Determine internal name:
+    # 5) Determine internal name:
+    #    - If there is a "Name" field, use it (v2 format)
+    #    - Otherwise, fall back to the first root key (legacy format)
     if isinstance(data, dict) and "Name" in data:
         internal_name = data["Name"]
     elif isinstance(data, dict):
@@ -146,7 +148,7 @@ def upload_test_case():
             "message": "YAML must be a mapping with a 'Name' field or a root key"
         }), 400
 
-    # 5) Remove any existing .yml files with that same internal name
+    # 6) Check for duplicates by internal name
     for filename in os.listdir(folder):
         if not filename.lower().endswith('.yml'):
             continue
@@ -161,10 +163,16 @@ def upload_test_case():
             existing.get("Name") == internal_name
             or internal_name in existing
         ):
-            os.remove(path)
+            return jsonify({
+                "success": False,
+                "message": f"An entry named '{internal_name}' already exists (file: {filename})"
+            }), 409
 
-    # 6) Save the new file using its original filename
+    # 7) Save the new file using its original filename
     save_path = os.path.join(folder, uploaded.filename)
+    if os.path.exists(save_path):
+        return jsonify({"success": False, "message": f"File {uploaded.filename} already exists"}), 409
+
     try:
         uploaded.save(save_path)
         Facility.Reload()
@@ -223,3 +231,78 @@ def facilityTestCasesInfo():
         "TestCases": testcases_raw,
         "UEs":       ues_raw
     })
+
+@bp.route('/edit_test_case', methods=['POST'])
+def edit_test_case():
+    
+    uploaded  = request.files.get('test_case')
+    file_type = request.form.get('file_type', 'testcase')
+
+    # 1) Basic validation
+    if not uploaded or not uploaded.filename.lower().endswith('.yml'):
+        return jsonify({"success": False, "message": "No file received or invalid extension"}), 400
+
+    # 2) Read & parse YAML
+    raw = uploaded.read()
+    try:
+        doc = yaml.safe_load(raw)
+    except yaml.YAMLError as e:
+        return jsonify({"success": False, "message": f"Invalid YAML: {e}"}), 400
+
+    # rewind for saving later
+    uploaded.stream.seek(0)
+
+    # 3) Determine internal_name
+    if isinstance(doc, dict) and "Name" in doc:
+        internal_name = doc["Name"]
+    elif isinstance(doc, dict):
+        internal_name = next(iter(doc.keys()))
+    else:
+        return jsonify({
+            "success": False,
+            "message": "YAML must be a mapping with a 'Name' field or a root key"
+        }), 400
+
+    # 4) Prevent renaming: the filename base must match internal_name
+    orig_base = uploaded.filename.rsplit('.', 1)[0]
+    if internal_name != orig_base:
+        return jsonify({
+            "success": False,
+            "message": "Changing the internal 'Name' is not allowed"
+        }), 400
+
+    # 5) Ensure this resource already exists in the index
+    index = Facility.ues if file_type == 'ues' else Facility.testCases
+    if internal_name not in index:
+        return jsonify({
+            "success": False,
+            "message": f"{file_type.capitalize()} '{internal_name}' does not exist"
+        }), 404
+
+    # 6) Delete any on-disk .yml matching that internal_name
+    folder = Facility.UE_FOLDER if file_type == 'ues' else Facility.TESTCASE_FOLDER
+    for fn in os.listdir(folder):
+        if not fn.lower().endswith('.yml'):
+            continue
+        path = os.path.join(folder, fn)
+        try:
+            with open(path, encoding='utf-8') as f:
+                existing = yaml.safe_load(f)
+        except Exception:
+            continue
+        if isinstance(existing, dict) and (
+            existing.get("Name") == internal_name or internal_name in existing
+        ):
+            os.remove(path)
+
+    # 7) Save new YAML as internal_name.yml
+    save_path = os.path.join(folder, f"{internal_name}.yml")
+    try:
+        uploaded.save(save_path)
+        Facility.Reload()
+        return jsonify({
+            "success": True,
+            "message": f"{file_type.capitalize()} '{internal_name}' updated successfully"
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
