@@ -306,3 +306,52 @@ def edit_test_case():
         }), 200
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
+    
+@bp.route('/execution/info', methods=['POST'])
+def get_execution_info():
+    data = request.get_json()
+    execution_id = data.get("ExecutionId")
+
+    if not execution_id:
+        return jsonify({"success": False, "message": "ExecutionId is required"}), 400
+
+    folder = os.path.abspath("Persistence/Executions_yml")
+    if not os.path.exists(folder):
+        return jsonify({"success": False, "message": "Execution folder not found"}), 404
+
+    testcases = {}
+    ues = {}
+
+    for filename in os.listdir(folder):
+        if not filename.endswith(".yml"):
+            continue
+
+        if filename.startswith(f"{execution_id}_testcase_"):
+            name = filename.replace(f"{execution_id}_testcase_", "").replace(".yml", "")
+            path = os.path.join(folder, filename)
+            try:
+                with open(path, encoding='utf-8') as f:
+                    testcases[name] = [f.read()]
+            except Exception:
+                continue
+
+        elif filename.startswith(f"{execution_id}_ue_"):
+            name = filename.replace(f"{execution_id}_ue_", "").replace(".yml", "")
+            path = os.path.join(folder, filename)
+            try:
+                with open(path, encoding='utf-8') as f:
+                    ues[name] = [f.read()]
+            except Exception:
+                continue
+
+    if not testcases and not ues:
+        return jsonify({
+            "success": False,
+            "message": f"No testcases or UEs found for execution ID '{execution_id}'"
+        }), 404
+
+    return jsonify({
+        "ExecutionId": execution_id,
+        "TestCases": testcases,
+        "UEs": ues
+    }), 200
