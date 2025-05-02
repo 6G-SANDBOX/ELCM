@@ -193,14 +193,8 @@ def convert_to_dict(obj):
         return {key: convert_to_dict(value) for key, value in vars(obj).items()}
     else:
         return obj
-
-@bp.route('/testcases/info', methods=['POST'])
-def facilityTestCasesInfo():
-    data = request.get_json()
-    requested_testcases = set(data.get("TestCases", []))
-    requested_ues = set(data.get("UEs", []))
-
-    def load_raw(folder: str, index: Dict[str, object], names: set) -> Dict[str, List[str]]:
+    
+def load_raw(folder: str, index: Dict[str, object], names: set) -> Dict[str, List[str]]:
         out = {}
         for name in names:
             if name not in index:
@@ -223,6 +217,12 @@ def facilityTestCasesInfo():
             if raw_versions:
                 out[name] = raw_versions
         return out
+
+@bp.route('/testcases/info', methods=['POST'])
+def facilityTestCasesInfo():
+    data = request.get_json()
+    requested_testcases = set(data.get("TestCases", []))
+    requested_ues = set(data.get("UEs", []))
 
     testcases_raw = load_raw(Facility.TESTCASE_FOLDER, Facility.testCases, requested_testcases)
     ues_raw       = load_raw(Facility.UE_FOLDER,      Facility.ues,      requested_ues)
@@ -306,3 +306,52 @@ def edit_test_case():
         }), 200
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
+    
+@bp.route('/execution/info', methods=['POST'])
+def get_execution_info():
+    data = request.get_json()
+    execution_id = data.get("ExecutionId")
+
+    if not execution_id:
+        return jsonify({"success": False, "message": "ExecutionId is required"}), 400
+
+    folder = os.path.abspath("Persistence/Executions_yml")
+    if not os.path.exists(folder):
+        return jsonify({"success": False, "message": "Execution folder not found"}), 404
+
+    testcases = {}
+    ues = {}
+
+    for filename in os.listdir(folder):
+        if not filename.endswith(".yml"):
+            continue
+
+        if filename.startswith(f"{execution_id}_testcase_"):
+            name = filename.replace(f"{execution_id}_testcase_", "").replace(".yml", "")
+            path = os.path.join(folder, filename)
+            try:
+                with open(path, encoding='utf-8') as f:
+                    testcases[name] = [f.read()]
+            except Exception:
+                continue
+
+        elif filename.startswith(f"{execution_id}_ue_"):
+            name = filename.replace(f"{execution_id}_ue_", "").replace(".yml", "")
+            path = os.path.join(folder, filename)
+            try:
+                with open(path, encoding='utf-8') as f:
+                    ues[name] = [f.read()]
+            except Exception:
+                continue
+
+    if not testcases and not ues:
+        return jsonify({
+            "success": False,
+            "message": f"No testcases or UEs found for execution ID '{execution_id}'"
+        }), 404
+
+    return jsonify({
+        "ExecutionId": execution_id,
+        "TestCases": testcases,
+        "UEs": ues
+    }), 200
