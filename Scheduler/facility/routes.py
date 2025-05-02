@@ -179,7 +179,7 @@ def upload_test_case():
         return jsonify({
             "success": True,
             "message": f"{'UEs' if file_type == 'ues' else 'Test case'} "
-                       f"'{uploaded.filename}' uploaded successfully"
+                       f"'{internal_name}' uploaded successfully"
         }), 200
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
