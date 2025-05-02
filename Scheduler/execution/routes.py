@@ -9,13 +9,23 @@ from Facility import Facility
 from os.path import join, isfile, abspath
 
 
-@bp.route('<int:executionId>/cancel')  # Deprecated
-# @bp.route('<int:executionId>', methods=["DELETE"])
+@bp.route('<int:executionId>/cancel')
 def cancel(executionId: int):
-    ExecutionQueue.Cancel(executionId)
-    flash(f'Cancelled execution {executionId}', 'info')
+    try:
+        ExecutionQueue.Cancel(executionId)
+        flash(f'Cancelled execution {executionId}', 'info')
+    except Exception as e:
+        flash(f'Error cancelling execution {executionId}: {str(e)}', 'danger')
     return redirect(url_for('index'))
 
+
+@bp.route('<int:executionId>/cancel_execution_api')
+def cancel_execution_api(executionId: int):
+    try:
+        ExecutionQueue.Cancel(executionId)
+        return jsonify(success=True, message=f'Cancelled execution {executionId}'), 200
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
 
 @bp.route('<int:executionId>/delete')  # To be removed
 def delete(executionId: int):
