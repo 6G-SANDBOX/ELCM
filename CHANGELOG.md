@@ -1,3 +1,20 @@
+**07/05/2025** [Version 3.8.0]
+- Updated project requirements and internal definitions.  
+- Refactored task coordination and core execution flow.  
+- Added YAML‑based workflows for test cases and UEs (create, edit, upload, delete).  
+- Introduced automatic execution backups for test cases.  
+- Added new endpoints for managing ELCM/PORTAL.  
+- Optimized InfluxDB integration.  
+- Enhanced Kafka support.  
+- Improved validation and sanitization.  
+- Restored and extended scenario handler.  
+- Updated documentation, samples, and configuration files. 
+- New tasks included:
+  - EmailFiles
+  - InfluxToCsv
+  - WaitForInflux
+  - AthonetToInflux
+
 **05/12/2024** [Version 3.7.1]
  - Avoid exception on start when using Python 3.12
 

@@ -2,7 +2,7 @@
 
 ## Requirements
 
- - [Python 3.10.x](https://www.python.org) (see requirements.txt for a detailed view of required packages)
+ - [Python 3.12.x](https://www.python.org) (see requirements.txt for a detailed view of required packages)
 
 ### Optional integrations:
 
@@ -22,9 +22,9 @@
 
 ### Installation procedure
 
-> Additional dependencies may be needed depending on your environment. For example, older Windows version may require
+> Additional dependencies may be needed depending on your environment. For example, older Windows versions may require
 certain Visual C++ redistributables to be installed, and the following packages are known to be required on many Ubuntu
-distributions: `gcc python3.10 python3.10-venv python3.10-dev`.
+distributions: `gcc python3.12 python3.12-venv python3.12-dev`.
 
 This repository includes two sets of scripts for use on Linux (`.sh`) and Windows (`.ps1`) machines. In general,
 these scripts should be able to perform most of the actions required for instantiating the ELCM, however, depending
@@ -32,18 +32,18 @@ on the deployment environment some actions may fail or require additional tweaki
 be used as a guide for manual installation, and a description of the actions performed by the scripts is included below
 for use as reference.
 
-1. Ensure that Python 3.10.x is installed. For environments with multiple Python versions note the correct alias.
+1. Ensure that Python 3.12.x is installed. For environments with multiple Python versions note the correct alias.
    > For example, older Ubuntu distributions refer to Python 2.x by default when invoking `python`, and reference 
-   > Python 3.10 as `python3` or `python3.10`. Use the `--version` parameter to check the version number.
+   > Python 3.12 as `python3` or `python3.12`. Use the `--version` parameter to check the version number.
 2. Clone the repository to a known folder
 3. Run `install.sh <python_alias>` or `install.ps1 <python_alias>` (depending on your OS). The script will:
-  - Display the Python version in use (ensure that this is 3.10.x)
-  - Create a [Python virtual environment](https://virtualenv.pypa.io/en/stable/) for exclusive use of the ELCM.
-  - Install the required Python packages (using [pip](https://pypi.org/project/pip/))
-  > Most issues occur during this step, since it is highly dependent on the environment. In case of error, note the 
-  > name of the package that could not be installed, the error message and your OS distribution. Performing an Internet 
-  > search with this information usually yields a solution. Once solved you may re-run the script (delete the `venv` 
-  > folder that was created by the script if necessary) until all packages are correctly installed.
+   - Display the Python version in use (ensure that this is 3.12.x)
+   - Create a [Python virtual environment](https://virtualenv.pypa.io/en/stable/) for exclusive use of the ELCM.
+   - Install the required Python packages (using [pip](https://pypi.org/project/pip/))
+   > Most issues occur during this step, since it is highly dependent on the environment. In case of error, note the 
+   > name of the package that could not be installed, the error message and your OS distribution. Performing an Internet 
+   > search with this information usually yields a solution. Once solved you may re-run the script (delete the `venv` 
+   > folder that was created by the script if necessary) until all packages are correctly installed.
 4. Run `start.sh` or `start.ps1` (depending on your OS). This will create an empty configuration file (`config.yml`).
    If necessary, press ctrl+c (or your OS equivalent) in order to close the server.
 5. Ensure that the `config.yml` is available in the ELCM folder and customize its contents. Information about all the 
@@ -51,11 +51,11 @@ for use as reference.
 
 ### Starting the ELCM
 
-> Before using the scripts for starting a production ELCM instance consider changing the `<YOUR SECRET KEY HERE>`
-> value to a random string (for more info see [this answer](https://stackoverflow.com/a/22463969).). This is 
-> particularly important if the ELCM port is exposed to the Internet (in this case also consider using `waitress`,
-> as can be seen in the Portal scripts).
-> 
+> Before using the scripts for starting a production ELCM instance consider changing the `<YOUR SECRET KEY HERE>`  
+> value to a random string (for more info see [this answer](https://stackoverflow.com/a/22463969).). This is  
+> particularly important if the ELCM port is exposed to the Internet (in this case also consider using `waitress`,  
+> as can be seen in the Portal scripts).  
+>   
 > Please note that **it is not recommended exposing the ELCM to the open Internet**, regardless of these tips.
 
 Once configured, the ELCM can be started by running `start.sh <port_number>` or `start.ps1 <port_number>`. If not
@@ -95,8 +95,8 @@ Detailed usage documentation can be found in the `docs` folder of this repositor
 
 ## License
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
+Licensed under the Apache License, Version 2.0 (the "License");  
+you may not use this file except in compliance with the License.  
 You may obtain a copy of the License at
 
    > <http://www.apache.org/licenses/LICENSE-2.0>

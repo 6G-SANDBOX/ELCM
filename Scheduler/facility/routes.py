@@ -113,7 +113,7 @@ def deleteTestCase():
 
 @bp.route('/upload_test_case', methods=['POST'])
 def upload_test_case():
-    uploaded  = request.files.get('test_case')
+    uploaded = request.files.get('test_case')
     file_type = request.form.get('file_type', 'testcase')
 
     # 1) Basic validations
@@ -125,19 +125,27 @@ def upload_test_case():
     # 2) Determine destination folder
     folder = Facility.UE_FOLDER if file_type == 'ues' else Facility.TESTCASE_FOLDER
 
-    # 3) Read the uploaded YAML to extract the internal name
+    # 3) Read and parse YAML
     try:
         content = uploaded.read()
         data = yaml.safe_load(content)
     except Exception as e:
         return jsonify({"success": False, "message": f"Invalid YAML: {e}"}), 400
 
+    # 3.1) Enforce: if 'Name' exists, 'Version' must be 2 (and vice versa)
+    if isinstance(data, dict):
+        version = data.get("Version")
+        has_name = "Name" in data
+        if (has_name and version != 2) or (version == 2 and not has_name):
+            return jsonify({
+                "success": False,
+                "message": "Invalid format: when using the 'Name' field, 'Version: 2' is required and vice versa."
+            }), 400
+
     # 4) Reset stream position for saving the file later
     uploaded.stream.seek(0)
 
-    # 5) Determine internal name:
-    #    - If there is a "Name" field, use it (v2 format)
-    #    - Otherwise, fall back to the first root key (legacy format)
+    # 5) Determine internal name
     if isinstance(data, dict) and "Name" in data:
         internal_name = data["Name"]
     elif isinstance(data, dict):
@@ -148,7 +156,9 @@ def upload_test_case():
             "message": "YAML must be a mapping with a 'Name' field or a root key"
         }), 400
 
-    # 6) Check for duplicates by internal name
+    uploaded_version = data.get("Version") if isinstance(data, dict) else None
+
+    # 6) Check for duplicates and block V1 → V2 upgrades
     for filename in os.listdir(folder):
         if not filename.lower().endswith('.yml'):
             continue
@@ -160,9 +170,15 @@ def upload_test_case():
             continue
 
         if isinstance(existing, dict) and (
-            existing.get("Name") == internal_name
-            or internal_name in existing
+            existing.get("Name") == internal_name or internal_name in existing
         ):
+            existing_version = existing.get("Version")
+            if (existing_version is None or existing_version == 1) and uploaded_version == 2:
+                return jsonify({
+                    "success": False,
+                    "message": f"Upload blocked: '{internal_name}' is already defined as a V1 TestCase and cannot be replaced by a V2 version."
+                }), 400
+
             return jsonify({
                 "success": False,
                 "message": f"An entry named '{internal_name}' already exists (file: {filename})"
@@ -234,8 +250,7 @@ def facilityTestCasesInfo():
 
 @bp.route('/edit_test_case', methods=['POST'])
 def edit_test_case():
-    
-    uploaded  = request.files.get('test_case')
+    uploaded = request.files.get('test_case')
     file_type = request.form.get('file_type', 'testcase')
 
     # 1) Basic validation
@@ -249,10 +264,20 @@ def edit_test_case():
     except yaml.YAMLError as e:
         return jsonify({"success": False, "message": f"Invalid YAML: {e}"}), 400
 
-    # rewind for saving later
+    # Rewind for saving later
     uploaded.stream.seek(0)
 
-    # 3) Determine internal_name
+    # 3) Enforce: if 'Name' exists, 'Version' must be 2 (and vice versa)
+    if isinstance(doc, dict):
+        version = doc.get("Version")
+        has_name = "Name" in doc
+        if (has_name and version != 2) or (version == 2 and not has_name):
+            return jsonify({
+                "success": False,
+                "message": "Invalid format: when using the 'Name' field, 'Version: 2' is required and vice versa."
+            }), 400
+
+    # 4) Determine internal_name
     if isinstance(doc, dict) and "Name" in doc:
         internal_name = doc["Name"]
     elif isinstance(doc, dict):
@@ -263,7 +288,7 @@ def edit_test_case():
             "message": "YAML must be a mapping with a 'Name' field or a root key"
         }), 400
 
-    # 4) Prevent renaming: the filename base must match internal_name
+    # 5) Prevent renaming
     orig_base = uploaded.filename.rsplit('.', 1)[0]
     if internal_name != orig_base:
         return jsonify({
@@ -271,7 +296,7 @@ def edit_test_case():
             "message": "Changing the internal 'Name' is not allowed"
         }), 400
 
-    # 5) Ensure this resource already exists in the index
+    # 6) Ensure the resource exists
     index = Facility.ues if file_type == 'ues' else Facility.testCases
     if internal_name not in index:
         return jsonify({
@@ -279,8 +304,40 @@ def edit_test_case():
             "message": f"{file_type.capitalize()} '{internal_name}' does not exist"
         }), 404
 
-    # 6) Delete any on-disk .yml matching that internal_name
+    # 7) Prevent version changes (V1 ↔ V2)
     folder = Facility.UE_FOLDER if file_type == 'ues' else Facility.TESTCASE_FOLDER
+    existing_doc = None
+    for fn in os.listdir(folder):
+        if not fn.lower().endswith('.yml'):
+            continue
+        path = os.path.join(folder, fn)
+        try:
+            with open(path, encoding='utf-8') as f:
+                candidate = yaml.safe_load(f)
+        except Exception:
+            continue
+        if isinstance(candidate, dict) and (
+            candidate.get("Name") == internal_name or internal_name in candidate
+        ):
+            existing_doc = candidate
+            break
+
+    existing_version = existing_doc.get("Version") if isinstance(existing_doc, dict) else None
+    uploaded_version = doc.get("Version") if isinstance(doc, dict) else None
+
+    if existing_version == 2 and uploaded_version != 2:
+        return jsonify({
+            "success": False,
+            "message": f"Editing not allowed: '{internal_name}' is a V2 TestCase and must remain Version: 2."
+        }), 400
+
+    if (existing_version is None or existing_version == 1) and uploaded_version == 2:
+        return jsonify({
+            "success": False,
+            "message": f"Editing not allowed: '{internal_name}' is a V1 TestCase and cannot be upgraded to V2."
+        }), 400
+
+    # 8) Delete existing file(s)
     for fn in os.listdir(folder):
         if not fn.lower().endswith('.yml'):
             continue
@@ -295,7 +352,7 @@ def edit_test_case():
         ):
             os.remove(path)
 
-    # 7) Save new YAML as internal_name.yml
+    # 9) Save new YAML
     save_path = os.path.join(folder, f"{internal_name}.yml")
     try:
         uploaded.save(save_path)

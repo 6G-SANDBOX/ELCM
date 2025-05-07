@@ -32,8 +32,8 @@ class EmailFiles(Task):
         email_server = info.get("Server", None)
         email = self.params.get("Email", None)        
         directory_path = self.params.get("DirectoryPath") or self.parent.TempFolder
-        delete_original= self.params.get("DeleteOriginal", False)
-        delete_zip= self.params.get("DeleteZip", False)
+        delete_original = self.params.get("DeleteOriginal", False)
+        delete_zip = self.params.get("DeleteZip", False)
         
         # Check for missing configuration or parameters
         missing_params = []
@@ -106,23 +106,28 @@ class EmailFiles(Task):
                 part.add_header('Content-Disposition', f'attachment; filename={os.path.basename(zip_file_path)}')
                 message.attach(part)
         except Exception as e:
-        
             self.Log(Level.ERROR, f'Error attaching file: {e}')
             return
 
-        # Send the email
+        # Send the email: try TLS first, then SSL fallback
         try:
             server = smtplib.SMTP(server_smtp, port)
-            server.starttls()  
-            server.login(user, password)  
+            server.starttls()
+            server.login(user, password)
             server.sendmail(user, email_to, message.as_string())
-            server.quit()  
-            self.Log(Level.INFO, f'Email successfully sent to {email_to}!')
-        except Exception as e:
-            
-            self.Log(Level.ERROR, f'Error sending email: {e}')
-            return
-        
+            server.quit()
+            self.Log(Level.INFO, f'Email successfully sent to {email_to}')
+        except Exception as e_tls:
+            try:
+                server = smtplib.SMTP_SSL(server_smtp, port)
+                server.login(user, password)
+                server.sendmail(user, email_to, message.as_string())
+                server.quit()
+                self.Log(Level.INFO, f'Email successfully sent to {email_to}')
+            except Exception as e_ssl:
+                self.Log(Level.ERROR, f'Error sending email with TLS: {e_tls}; SSL fallback also failed: {e_ssl}')
+                return
+
         if delete_original is True:
             # Delete the original files that were compressed
             try:
