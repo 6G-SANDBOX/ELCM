@@ -6,9 +6,7 @@
 
 ### Optional integrations:
 
-#### 5Genesis components
-
- - [Portal](https://github.com/5genesis/Portal) Version 3.0.0 (28/10/2024) or later
+ - [Portal](https://gitlab.com/morse-uma/elcm-portal) Version 3.1.0 or later
  - [Katana Slice Manager](https://github.com/5genesis/katana-slice_manager) Version 2.2.6 (14/07/2020) or later
 
 #### Third party components
