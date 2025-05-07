@@ -7,7 +7,7 @@
 - Optimized InfluxDB integration.  
 - Enhanced Kafka support.  
 - Improved validation and sanitization.  
-- Restored and extended scenario selector/handler.  
+- Restored and extended scenario handler.  
 - Updated documentation, samples, and configuration files. 
 - New tasks included:
   - EmailFiles
