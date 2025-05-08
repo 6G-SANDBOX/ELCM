@@ -60,9 +60,9 @@ One, and only one of `Evaluate` and `Key` must be part of a Condition. The follo
 
 # Optional Task Parameters
 
-### 🛑 `NoStop` Flag
+## NoStop Flag
 
-The `NoStop: True` configuration flag prevents a task from being stopped, even if a global execution cancellation is requested.
+The `NoStop: True` configuration flag prevents a task from being stopped if an execution cancellation is requested.
 
 ```yaml
 Config:
