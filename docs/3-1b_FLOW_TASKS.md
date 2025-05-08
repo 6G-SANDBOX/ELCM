@@ -57,3 +57,15 @@ One, and only one of `Evaluate` and `Key` must be part of a Condition. The follo
 > - Evaluate Conditions can execute arbitrary code.
 > - Since the test cases are defined by the platform operators it is expected that no dangerous code will be executed,
 > however, **exercise extreme caution, specially if variable expansion is used** as part of the condition.
+
+# Optional Task Parameters
+
+### 🛑 `NoStop` Flag
+
+The `NoStop: True` configuration flag prevents a task from being stopped, even if a global execution cancellation is requested.
+
+```yaml
+Config:
+  ExecutionId: "@{ExecutionId}"
+  Measurement: "MQTT"
+  NoStop: True
