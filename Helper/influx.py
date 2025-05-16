@@ -218,6 +218,9 @@ class InfluxDb:
     @classmethod
     def CsvToPayload(cls, measurement: str, csvFile: str, delimiter: str, timestampKey: str,
                     tryConvert: bool = True, keysToRemove: List[str] = None) -> InfluxPayload:
+        
+        from Executor.Tasks.Run.to_influx import ToInfluxBase
+
         def _convert(value: str) -> Union[int, float, bool, str]:
             try:
                 return float(value)
@@ -231,32 +234,33 @@ class InfluxDb:
             except ValueError:
                 raise RuntimeError(f"Invalid timestamp: {timestamp_str}")
 
-            if ts > 1e17:  
+            if ts > 1e17:
                 return datetime.fromtimestamp(ts / 1e9, tz=timezone.utc)
-            elif ts > 1e12:  
+            elif ts > 1e12:
                 return datetime.fromtimestamp(ts / 1e3, tz=timezone.utc)
-            else:  
+            else:
                 return datetime.fromtimestamp(ts, tz=timezone.utc)
-            
-        keysToRemove = [] if keysToRemove is None else keysToRemove
+
+        keysToRemove = keysToRemove or []
+
+        if not hasattr(cls._thread_local, 'client'):
+            cls.initialize()
 
         with open(csvFile, 'r', encoding='utf-8', newline='') as file:
             header = file.readline()
             keys = [k.strip() for k in header.split(delimiter)]
 
             if timestampKey not in keys:
-                raise RuntimeError(
-                    f"CSV file does not seem to contain timestamp ('{timestampKey}'). "
-                    f"Found keys: {keys}"
-                )
+                raise RuntimeError(f"CSV file does not seem to contain timestamp ('{timestampKey}'). "
+                                f"Found keys: {keys}")
 
             dialect = baseDialect()
             dialect.delimiter = str(delimiter.strip())
-            reader = DictReader(file, fieldnames=keys, restval=None, dialect=dialect)
+            csv = DictReader(file, fieldnames=keys, restval=None, dialect=dialect)
 
             payload = InfluxPayload(measurement)
 
-            for row in reader:
+            for row in csv:
                 ts_str = row.pop(timestampKey)
                 try:
                     timestamp = parse_timestamp(ts_str)
@@ -272,18 +276,20 @@ class InfluxDb:
                 raw_value = row.pop("_value", None)
                 csv_measurement = row.pop("_measurement", None)
 
-                if field_name is None:
-                    continue
-                if csv_measurement:
-                    field_name = f"{csv_measurement}_{field_name}"
-                value = _convert(raw_value) if tryConvert else raw_value
-                point.Fields[field_name] = value
+                if field_name is not None:
+                    clean_field = ToInfluxBase.sanitize_string(field_name)
+                    clean_measurement = ToInfluxBase.sanitize_string(csv_measurement) if csv_measurement else None
+                    full_field_name = f"{clean_measurement}_{clean_field}" if clean_measurement else clean_field
+                    value = _convert(raw_value) if tryConvert else raw_value
+                    point.Fields[full_field_name] = value
 
-                for key, val in row.items():
-                    if key in keysToRemove or val is None:
+                for key, value in row.items():
+                    if key in keysToRemove or value is None:
                         continue
-                    if key in ("_measurement",):
-                        continue
+                    if tryConvert:
+                        value = _convert(value)
+                    clean_key = ToInfluxBase.sanitize_string(key)
+                    point.Fields[clean_key] = value
 
                 payload.Points.append(point)
 
