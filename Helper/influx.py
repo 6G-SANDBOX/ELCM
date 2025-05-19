@@ -394,10 +394,14 @@ class InfluxDb:
 
         return res
     
-    def export_influxdb_v1(influx_dir, database, execution_id, url, user, password, measurement, custom_query=None):
-        output_file = os.path.join(influx_dir, f"csv_{measurement}_{execution_id}.csv")
-        q = custom_query if custom_query else f'SELECT * FROM "{measurement}" WHERE "ExecutionId" = \'{execution_id}\''
-        params = {"db": database, "q": q}
+    def export_influxdb_v1(influx_dir, database, id_csv, url, user, password, custom_query):
+        output_file = os.path.join(influx_dir, f"csv_query_{id_csv}.csv")
+
+        if not custom_query:
+            Log.I("No custom query provided for InfluxDB v1 export.")
+            return
+
+        params = {"db": database, "q": custom_query}
         headers = {"Accept": "application/csv"}
         try:
             response = requests.get(f"{url}/query", params=params, headers=headers, auth=(user, password))
@@ -408,23 +412,20 @@ class InfluxDb:
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v1.x: {e}")
 
-    def export_influxdb_v2(influx_dir, bucket, token, org, execution_id, url, measurement, custom_query=None):
-        output_file = os.path.join(influx_dir, f"csv_{measurement}_{execution_id}.csv")
-        flux_query = custom_query if custom_query else f'''
-        from(bucket: "{bucket}")
-        |> range(start: 0)
-        |> filter(fn: (r) => r["_measurement"] == "{measurement}")
-        |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
-        |> group()
-        |> sort(columns: ["_time"])
-        '''
+    def export_influxdb_v2(influx_dir, token, org, id_csv, url, custom_query):
+        output_file = os.path.join(influx_dir, f"csv_query_{id_csv}.csv")
+
+        if not custom_query:
+            Log.I("No custom query provided for InfluxDB v2 export.")
+            return
+
         headers = {
             "Authorization": f"Token {token}",
             "Accept": "text/csv",
             "Content-Type": "application/vnd.flux"
         }
         try:
-            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
+            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=custom_query)
             response.raise_for_status()
             if not response.text.strip():
                 Log.I("InfluxDB returned an empty response. No data to write.")
@@ -444,9 +445,8 @@ class InfluxDb:
                 lines = infile.readlines()
             with open(output_file, 'w', encoding='utf-8') as outfile:
                 for line in lines:
-                    if not line.strip().strip(','):
-                        continue  
-                    outfile.write(line)
+                    if line.strip().strip(','):
+                        outfile.write(line)
             Log.I(f"Data successfully exported and processed to {output_file} from InfluxDB v2.x")
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v2.x: {e}")

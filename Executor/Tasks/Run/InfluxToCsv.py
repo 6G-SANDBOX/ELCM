@@ -6,16 +6,15 @@ class InfluxToCsv(Task):
     def __init__(self, logMethod, parent, params):
         super().__init__("InfluxToCsv", parent, params, logMethod, None)
         self.paramRules = {
-            'ExecutionId': (None, True),
+            'IdCsv': (None, True),
             'Token': (None, False),
             'Password': (None, False),
             'User': (None, False),
             'Host': (None, False),
             'Port': (None, False),
             'Database': (None, False),
-            'Measurement': (None, False),
             'Org': (None, False),
-            'CustomQuery': (None, False)
+            'CustomQuery': (None, True)
         }
 
     def Run(self):
@@ -25,32 +24,25 @@ class InfluxToCsv(Task):
         port = self.params.get('Port') or config.InfluxDb.Port
         url = f"http://{host}:{port}"
         version = influx.InfluxDb.detectInfluxDBVersion(url)
-        execution_id = self.params.get('ExecutionId')
+
+        id_csv = self.params.get('IdCsv')
         influx_dir = self.parent.TempFolder
 
         token = self.params.get('Token') or config.InfluxDb.Token
         password = self.params.get('Password') or config.InfluxDb.Password
         user = self.params.get('User') or config.InfluxDb.User
         database = self.params.get('Database') or config.InfluxDb.Database
-        measurement = self.params.get('Measurement')
         org = self.params.get('Org') or config.InfluxDb.Org
         custom_query = self.params.get('CustomQuery')
 
-        if not measurement and not custom_query:
-            self.Log(Level.ERROR, "Either 'Measurement' or 'CustomQuery' must be provided.")
+        if not custom_query:
+            self.Log(Level.ERROR, "'CustomQuery' must be provided.")
             return
-
-        if measurement and custom_query:
-            self.Log(Level.ERROR,"You must provide either 'Measurement' or 'CustomQuery', but not both.")
-            return
-
-        resolved_measurement = "custom_query" if custom_query else measurement
 
         common_params = {
             "influx_dir": influx_dir,
-            "execution_id": execution_id,
-            "url": url,
-            "measurement": resolved_measurement
+            "id_csv": id_csv,
+            "url": url
         }
 
         if version == influx.Versions.V1:
@@ -64,7 +56,6 @@ class InfluxToCsv(Task):
         elif version == influx.Versions.V2:
             influx.InfluxDb.export_influxdb_v2(
                 **common_params,
-                bucket=database,
                 token=token,
                 org=org,
                 custom_query=custom_query
