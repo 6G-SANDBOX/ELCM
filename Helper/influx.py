@@ -272,24 +272,26 @@ class InfluxDb:
 
                 point = InfluxPoint(timestamp)
 
+                # Try to detect a prefix field from either Influx v2 (_measurement) or v1 (name)
+                csv_measurement = row.pop("_measurement", None) or row.pop("name", None)
+                prefix = ToInfluxBase.sanitize_string(csv_measurement) if csv_measurement else None
+
                 field_name = row.pop("_field", None)
                 raw_value = row.pop("_value", None)
-                csv_measurement = row.pop("_measurement", None)
 
                 if field_name is not None:
                     clean_field = ToInfluxBase.sanitize_string(field_name)
-                    clean_measurement = ToInfluxBase.sanitize_string(csv_measurement) if csv_measurement else None
-                    full_field_name = f"{clean_measurement}_{clean_field}" if clean_measurement else clean_field
+                    full_field_name = f"{prefix}_{clean_field}" if prefix else clean_field
                     value = _convert(raw_value) if tryConvert else raw_value
                     point.Fields[full_field_name] = value
 
                 for key, value in row.items():
                     if key in keysToRemove or value is None:
                         continue
-                    if tryConvert:
-                        value = _convert(value)
                     clean_key = ToInfluxBase.sanitize_string(key)
-                    point.Fields[clean_key] = value
+                    if prefix and key.lower() != "tags":
+                        clean_key = f"{prefix}_{clean_key}"
+                    point.Fields[clean_key] = _convert(value) if tryConvert else value
 
                 payload.Points.append(point)
 
