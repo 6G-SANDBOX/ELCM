@@ -493,7 +493,7 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 
 **Description**:
 
-This task exports data from an InfluxDB database (v1.x or v2.x) to a CSV file using a custom query. The task automatically detects the InfluxDB version and uses the appropriate protocol (InfluxQL or Flux) for exporting the data. The result is saved as a CSV file in the task’s temporary directory.
+This task exports data from an InfluxDB database to a CSV file using a custom query.
 
 **Configuration Parameters**:
 
