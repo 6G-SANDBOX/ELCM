@@ -281,7 +281,7 @@ class InfluxDb:
                     point.Fields[clean_field] = value
 
                 for key, value in row.items():
-                    if key in keysToRemove or value is None:
+                    if key in keysToRemove:
                         continue
                     clean_key = ToInfluxBase.sanitize_string(key)
                     point.Fields[clean_key] = _convert(value) if tryConvert else value
