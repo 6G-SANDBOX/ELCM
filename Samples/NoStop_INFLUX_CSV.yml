@@ -7,6 +7,10 @@ Sequence:
     Config:
       IdCsv: "1643"
       Host: "192.168.239.128"
+      Port: "8086"
+      Org: "org"
+      Database: "test-bucket"
+      Token: "your-token"
       CustomQuery: 'from(bucket: "mybucket") |> range(start: 0) |> filter(fn: (r) => r["_measurement"] == "KAFKA") |> filter(fn: (r) => r["ExecutionId"] == "1643") |> group()'  # Flux query (InfluxDB v2)
       NoStop: True
 
@@ -26,9 +30,7 @@ Sequence:
     Task: Run.InfluxToCsv
     Config:
       IdCsv: "1563"
-      Host: "192.168.239.128"
       CustomQuery: 'SELECT * FROM "KAFKA" WHERE "ExecutionId" = ''1563'''  # InfluxQL query (InfluxDB v1)
-      NoStop: True
 
   - Order: 4
     Task: Run.CsvToInflux
