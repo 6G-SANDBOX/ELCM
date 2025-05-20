@@ -524,6 +524,7 @@ Sequence:
       Org: "your-org"
 
 ```
+**Note**: The exported CSV file will be named using the `IdCsv` value as `csv_query_<IdCsv>.csv` and placed in the task's temporary folder.
 
 ## Run.EmailFiles
 
