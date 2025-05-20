@@ -1,63 +1,86 @@
 Version: 2
-Name: MQTT_KAFKA_CSV
+Name: INFLUXTOCSV_CSVTOINFLUX
 Sequence:
+  # -------- TASK 1: InfluxDB v2 - FLUX query --------
   - Order: 1
-    Task: Flow.Parallel
-    Children:
-      - Task: Run.MqttToInflux
-        Config:
-          ExecutionId: "@{ExecutionId}"
-          Broker: "192.168.xxx.xxx"
-          Port: "1885"
-          Topic: "my/topic/xxxx"
-          Measurement: MQTT
-          Stop: "stop_mqtt"
-          Account: False
-          Encryption: False
-      - Task: Flow.Sequence
-        Children:
-          - Task: Run.Delay
-            Config:
-              Time: 60
-          - Task: Run.AddMilestone
-            Config:
-              Milestone: "stop_mqtt"
-  - Order: 2
     Task: Run.InfluxToCsv
     Config:
-      ExecutionId: "1547"
-      Measurement: "KAFKA"
-      Host: localhost2
-      Port: 8086
-      Database: mybucket2
-      User: admin2
-      Password: adminpassword2
-      Token: your-v2-auth-token
-      Org: my-org-name
+      IdCsv: "1643"
+      Host: "192.168.239.128"
+      Port: "8086"
+      Org: "org"
+      Database: "test-bucket"
+      Token: "your-token"
+      CustomQuery: 'from(bucket: "mybucket") |> range(start: 0) |> filter(fn: (r) => r["_measurement"] == "KAFKA") |> filter(fn: (r) => r["ExecutionId"] == "1643") |> group()'  # Flux query (InfluxDB v2)
+      NoStop: True
+
+  - Order: 2
+    Task: Run.CsvToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      CSV: "@{TempFolder}\\csv_query_1643.csv"
+      Measurement: "Measurement_1643"
+      Delimiter: ","
+      Timestamp: "_time"
+      Convert: True
+      NoStop: True
+
+  # -------- TASK 2: InfluxDB v1 - InfluxQL query --------
   - Order: 3
     Task: Run.InfluxToCsv
     Config:
-      ExecutionId: "@{ExecutionId}"
-      Measurement: "MQTT"
-      NoStop: True
+      IdCsv: "1563"
+      CustomQuery: 'SELECT * FROM "KAFKA" WHERE "ExecutionId" = ''1563'''  # InfluxQL query (InfluxDB v1)
+
   - Order: 4
     Task: Run.CsvToInflux
     Config:
       ExecutionId: "@{ExecutionId}"
-      CSV: "@{TempFolder}\\csv_KAFKA_1547.csv"
-      Measurement: "SensorData"
+      CSV: "@{TempFolder}\\csv_query_1563.csv"
+      Measurement: "Measurement_1563"
+      Delimiter: ","
+      Timestamp: "time"
+      Convert: True
+      NoStop: True
+
+  # -------- TASK 3: InfluxDB v2 - FLUX query --------
+  - Order: 5
+    Task: Run.InfluxToCsv
+    Config:
+      IdCsv: "1789"
+      Host: "192.168.239.128"
+      CustomQuery: 'from(bucket: "mybucket") |> range(start: 0) |> filter(fn: (r) => r["ExecutionId"] == "1789") |> group()'  # Flux query (InfluxDB v2)
+      NoStop: True
+
+  - Order: 6
+    Task: Run.CsvToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      CSV: "@{TempFolder}\\csv_query_1789.csv"
+      Measurement: "Measurement_1789"
       Delimiter: ","
       Timestamp: "_time"
       Convert: True
       NoStop: True
 Standard: True
 Dashboard:
-  - Name: "Temperature_MQTT"
-    Measurement: "MQTT"
+  - Name: "Temperature_1643"
+    Measurement: "Measurement_1643"
     Field: "temperature"
     Type: Graph
     Interval: 1s
     Unit: celsius
+    Size: [9, 12]
+    Position: [8, 0]
+    Lines: True
+    Percentage: False
+
+  - Name: "Humidity_1643"
+    Measurement: "Measurement_1643"
+    Field: "humidity"
+    Type: Graph
+    Interval: 1s
+    Unit: percent
     Size: [9, 12]
     Position: [8, 0]
     Lines: True

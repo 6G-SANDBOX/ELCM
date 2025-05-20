@@ -22,16 +22,37 @@ these folders and their sub-folders will be added to the Zip file
 - `Output`: Name of the Zip file to generate.
 
 ## Run.CsvToInflux
+
+**Description**:
+
 Uploads the contents of a CSV file to InfluxDb. The file must contain a header row that specifies the names of each
 column, and must contain a column that specifies the timestamp value of the row as a POSIX timestamp (seconds from the
-epoch as float, and UTC timezone). Configuration values:
-- `ExecutionId`: Id of the execution (can be dinamically expanded from `@{ExecutionId}`)
-- `CSV`: Path of the CSV file to upload
-- `Measurement`: Measurement (table) where the results will be saved
-- `Delimiter`: CSV separator, defaults to `','`.
-- `Timestamp`: Name of the column that contains the row timestamp, defaults to `"Timestamp"`.
-- `Convert`: If True, try to convert the values to a suitable format (int, float, bool, str). Only 'True' and 'False'
-with any capitalization are converted to bool. If False, send all values as string. Defaults to True.
+epoch as float, and UTC timezone).
+
+**Configuration Parameters**:
+
+- `ExecutionId` (required): Id of the execution (can be dinamically expanded from `@{ExecutionId}`)
+- `CSV` (required): Path of the CSV file to upload.
+- `Measurement` (required): Measurement (table) where the results will be saved
+- `Delimiter` (optional, default: `,`): Field delimiter used in the CSV.
+- `Timestamp` (optional, default: `Timestamp`): Name of the timestamp column in the CSV.
+- `Convert` (optional, default: `True`): Whether to try and convert fields to appropriate types (float, bool, etc.).
+
+**YAML Configuration Example**:
+
+```yaml
+Version: 2
+Name: IMPORT_CSV_TO_INFLUX
+Sequence:
+  - Order: 1
+    Task: Run.CsvToInflux
+    Config:
+      ExecutionId: "@{ExecutionId}"
+      CSV: "@{TempFolder}\\csv_query_1643.csv"
+      Measurement: "performance_results"
+      Delimiter: ","
+      Timestamp: "Timestamp"
+      Convert: True
 
 ## Run.Delay
 Adds a configurable time wait to an experiment execution. Has a single configuration value:
@@ -472,37 +493,38 @@ Deploy the Helm Chart indicated by parameters in the cluster selected by the kub
 
 **Description**:
 
-This task exports data from an InfluxDB database (either v1.x or v2.x) to a CSV file based on a specified execution ID. It supports both InfluxDB versions and handles the necessary configurations for exporting data via the InfluxDB query language (for v1.x) or Flux (for v2.x).
+This task exports data from an InfluxDB database to a CSV file using a custom query.
 
 **Configuration Parameters**:
-- `ExecutionId` (required): The unique identifier for the execution, used to filter data.
-- `Measurement` (required): The name of the measurement to export data from.
-- `Host` (optional): InfluxDB server host.
-- `Port` (optional): InfluxDB server port.
-- `Database` (optional): Database name (for InfluxDB v1.x) or bucket name (for InfluxDB v2.x).
-- `User` (optional): Username for authenticating with InfluxDB v1.x.
-- `Password` (optional): Password associated with the InfluxDB v1.x user.
-- `Token` (optional): Authentication token for accessing InfluxDB v2.x.
-- `Org` (optional): InfluxDB organization name used for v2.x queries. If not provided, the default configured org is used.
+
+- `IdCsv` (required): Identifier used to name the output CSV file.
+- `CustomQuery` (required): Query string in InfluxQL (v1.x) or Flux (v2.x) to extract the data.
+- `Host` (optional): InfluxDB host. Defaults to the configured host.
+- `Port` (optional): InfluxDB port. Defaults to the configured port.
+- `Database` (optional): Database name (InfluxDB v1.x) or bucket name (v2.x).
+- `User` (optional): Username for InfluxDB v1.x.
+- `Password` (optional): Password for InfluxDB v1.x.
+- `Token` (optional): Token for InfluxDB v2.x.
+- `Org` (optional): Organization name for InfluxDB v2.x.
 
 **YAML Configuration Example**:
 ```yaml
 Version: 2
-Name: EXPORT_INFLUX_TO_CSV
+Name: EXPORT_FROM_INFLUX
 Sequence:
   - Order: 1
     Task: Run.InfluxToCsv
     Config:
-      ExecutionId: "@{ExecutionId}"        # Unique execution ID
-      Measurement: "sensor_data"           # Required measurement
-      Host: "localhost2"                   # Optional host override
-      Port: 8086                           # Optional port override
-      Database: "my_database"              # Optional database (v1.x) or bucket (v2.x)
-      User: "admin"                        # Optional for v1.x
-      Password: "secret"                   # Optional for v1.x
-      Token: "my-secret-token"             # Optional for v2.x
-      Org: "my-org-name"                   # Optional for v2.x
+      IdCsv: "1643"
+      CustomQuery: 'from(bucket: "mybucket") |> range(start: 0) |> filter(fn: (r) => r["ExecutionId"] == "1643") |> group()'
+      Host: "localhost"
+      Port: 8086
+      Database: "test-bucket"
+      Token: "your-token"
+      Org: "your-org"
+
 ```
+**Note**: The exported CSV file will be named using the `IdCsv` value as `csv_query_<IdCsv>.csv` and placed in the task's temporary folder.
 
 ## Run.EmailFiles
 

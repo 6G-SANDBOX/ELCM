@@ -218,6 +218,9 @@ class InfluxDb:
     @classmethod
     def CsvToPayload(cls, measurement: str, csvFile: str, delimiter: str, timestampKey: str,
                     tryConvert: bool = True, keysToRemove: List[str] = None) -> InfluxPayload:
+        
+        from Executor.Tasks.Run.to_influx import ToInfluxBase
+
         def _convert(value: str) -> Union[int, float, bool, str]:
             try:
                 return float(value)
@@ -231,50 +234,61 @@ class InfluxDb:
             except ValueError:
                 raise RuntimeError(f"Invalid timestamp: {timestamp_str}")
 
-            if ts > 1e17:  
+            if ts > 1e17:
                 return datetime.fromtimestamp(ts / 1e9, tz=timezone.utc)
-            elif ts > 1e12:  
+            elif ts > 1e12:
                 return datetime.fromtimestamp(ts / 1e3, tz=timezone.utc)
-            else:  
+            else:
                 return datetime.fromtimestamp(ts, tz=timezone.utc)
-            
-        keysToRemove = [] if keysToRemove is None else keysToRemove
+
+        keysToRemove = keysToRemove or []
+
+        if not hasattr(cls._thread_local, 'client'):
+            cls.initialize()
 
         with open(csvFile, 'r', encoding='utf-8', newline='') as file:
             header = file.readline()
             keys = [k.strip() for k in header.split(delimiter)]
 
             if timestampKey not in keys:
-                raise RuntimeError(f"CSV file does not seem to contain timestamp ('{timestampKey}') values. "
-                                f"Keys in file: {keys}")
+                raise RuntimeError(f"CSV file does not seem to contain timestamp ('{timestampKey}'). "
+                                f"Found keys: {keys}")
 
             dialect = baseDialect()
             dialect.delimiter = str(delimiter.strip())
-
             csv = DictReader(file, fieldnames=keys, restval=None, dialect=dialect)
+
             payload = InfluxPayload(measurement)
 
             for row in csv:
-                timestamp_str = row.pop(timestampKey)
-
+                ts_str = row.pop(timestampKey)
                 try:
-                    timestamp = parse_timestamp(timestamp_str)
+                    timestamp = parse_timestamp(ts_str)
                 except Exception:
                     try:
-                        timestamp = isoparse(timestamp_str)
+                        timestamp = isoparse(ts_str)
                     except Exception as e:
-                        raise RuntimeError(f"Error parsing timestamp: {timestamp_str}") from e
+                        raise RuntimeError(f"Error parsing timestamp: {ts_str}") from e
 
                 point = InfluxPoint(timestamp)
+
+                field_name = row.pop("_field", None)
+                raw_value = row.pop("_value", None)
+
+                if field_name is not None:
+                    clean_field = ToInfluxBase.sanitize_string(field_name)
+                    value = _convert(raw_value) if tryConvert else raw_value
+                    point.Fields[clean_field] = value
+
                 for key, value in row.items():
                     if key in keysToRemove:
                         continue
-                    if tryConvert:
-                        value = _convert(value)
-                    point.Fields[key] = value
+                    clean_key = ToInfluxBase.sanitize_string(key)
+                    point.Fields[clean_key] = _convert(value) if tryConvert else value
+
                 payload.Points.append(point)
 
-            return payload
+        return payload
 
     @classmethod
     def GetExecutionMeasurements(cls, executionId: int) -> List[str]:
@@ -375,69 +389,60 @@ class InfluxDb:
 
         return res
     
-    def export_influxdb_v1(influx_dir, database, execution_id, url, user, password, measurement):
-        output_file = os.path.join(influx_dir, f"csv_{measurement}_{execution_id}.csv")
+    def export_influxdb_v1(influx_dir, database, id_csv, url, user, password, custom_query):
+        output_file = os.path.join(influx_dir, f"csv_query_{id_csv}.csv")
 
-        query_params = {
-            "db": database,
-            "q": f'SELECT * FROM "{measurement}" WHERE "ExecutionId" = \'{execution_id}\''
-        }
+        if not custom_query:
+            Log.I("No custom query provided for InfluxDB v1 export.")
+            return
+
+        params = {"db": database, "q": custom_query}
         headers = {"Accept": "application/csv"}
-
         try:
-            response = requests.get(f"{url}/query", params=query_params, headers=headers, auth=(user, password))
+            response = requests.get(f"{url}/query", params=params, headers=headers, auth=(user, password))
             response.raise_for_status()
-
             with open(output_file, "w", encoding="utf-8", newline='') as f:
                 f.write(response.text)
-
             Log.I(f"Data successfully exported to {output_file} from InfluxDB v1.x")
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v1.x: {e}")
 
-    def export_influxdb_v2(influx_dir, bucket, token, org, execution_id, url, measurement):
-        output_file = os.path.join(influx_dir, f"csv_{measurement}_{execution_id}.csv")
+    def export_influxdb_v2(influx_dir, token, org, id_csv, url, custom_query):
+        output_file = os.path.join(influx_dir, f"csv_query_{id_csv}.csv")
 
-        flux_query = f'''
-        from(bucket: "{bucket}")
-        |> range(start: 0)
-        |> filter(fn: (r) => r["_measurement"] == "{measurement}")
-        |> filter(fn: (r) => r["ExecutionId"] == "{execution_id}")
-        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-        '''
+        if not custom_query:
+            Log.I("No custom query provided for InfluxDB v2 export.")
+            return
 
         headers = {
             "Authorization": f"Token {token}",
             "Accept": "text/csv",
             "Content-Type": "application/vnd.flux"
         }
-
         try:
-            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=flux_query)
+            response = requests.post(f"{url}/api/v2/query?org={org}", headers=headers, data=custom_query)
             response.raise_for_status()
-
             if not response.text.strip():
                 Log.I("InfluxDB returned an empty response. No data to write.")
                 return
-
             with open(output_file, "w", encoding="utf-8", newline='') as f:
                 f.write(response.text)
-
             if os.path.getsize(output_file) == 0:
                 Log.I("CSV file is empty after saving. Skipping parsing.")
                 return
-
             df = pd.read_csv(output_file)
-
             df.dropna(axis=1, how='all', inplace=True)
-
             columns_to_drop = ["_start", "_stop", "result", "table"]
             df.drop(columns=[col for col in columns_to_drop if col in df.columns], inplace=True)
-
             df.to_csv(output_file, index=False)
 
+            with open(output_file, 'r', encoding='utf-8') as infile:
+                lines = infile.readlines()
+            with open(output_file, 'w', encoding='utf-8') as outfile:
+                for line in lines:
+                    if line.strip().strip(','):
+                        outfile.write(line)
             Log.I(f"Data successfully exported and processed to {output_file} from InfluxDB v2.x")
-
         except requests.exceptions.RequestException as e:
             Log.I(f"Error exporting data from InfluxDB v2.x: {e}")
 

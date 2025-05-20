@@ -1,3 +1,9 @@
+**20/05/2025** [Version 3.8.1]
+
+- Added support for custom queries (InfluxQL and Flux) for exporting data from InfluxDB.
+- Improved sanitization of field names
+- Updated documentation and YAML examples.
+
 **07/05/2025** [Version 3.8.0]
 - Updated project requirements and internal definitions.  
 - Refactored task coordination and core execution flow.  
