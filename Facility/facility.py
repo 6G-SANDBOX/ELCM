@@ -1,4 +1,4 @@
-from os.path import abspath
+import os
 from .action_information import ActionInformation
 from .dashboard_panel import DashboardPanel
 from .resource import Resource
@@ -15,10 +15,10 @@ class Facility:
     activeExperiments: List[str] = []
     activeExclusive: Optional[str] = None
 
-    TESTCASE_FOLDER = abspath('TestCases')
-    UE_FOLDER = abspath('UEs')
-    RESOURCE_FOLDER = abspath('Resources')
-    SCENARIO_FOLDER = abspath('Scenarios')
+    TESTCASE_FOLDER = os.path.abspath('TestCases')
+    UE_FOLDER = os.path.abspath('UEs')
+    RESOURCE_FOLDER = os.path.abspath('Resources')
+    SCENARIO_FOLDER = os.path.abspath('Scenarios')
 
     ues: Dict[str, List[ActionInformation]] = {}
     testCases: Dict[str, List[ActionInformation]] = {}
@@ -29,6 +29,20 @@ class Facility:
     scenarios: Dict[str, List[ActionInformation]] = {}
 
     Validation: List[Tuple[Level, str]] = []
+
+    @classmethod
+    def testcase_folder(cls, user_id: str) -> str:
+        sub = str(user_id)
+        path = os.path.join(cls.TESTCASE_FOLDER, sub)
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    @classmethod
+    def ue_folder(cls, user_id: str) -> str:
+        sub = str(user_id)
+        path = os.path.join(cls.UE_FOLDER, sub)
+        os.makedirs(path, exist_ok=True)
+        return path
 
     @classmethod
     def Reload(cls):
@@ -48,13 +62,23 @@ class Facility:
             cls.Validation.extend(v)
             resources = ResourceLoader.GetCurrentResources()
 
+        # Load TestCases from all subfolders (users)
         TestCaseLoader.Clear()
-        v = TestCaseLoader.LoadFolder(cls.TESTCASE_FOLDER, "TestCase")
-        cls.Validation.extend(v)
+        if os.path.isdir(cls.TESTCASE_FOLDER):
+            for sub in os.listdir(cls.TESTCASE_FOLDER):
+                sub_path = os.path.join(cls.TESTCASE_FOLDER, sub)
+                if os.path.isdir(sub_path):
+                    v = TestCaseLoader.LoadFolder(sub_path, "TestCase")
+                    cls.Validation.extend(v)
 
+        # Load UEs from all subfolders (users)
         UeLoader.Clear()
-        v = UeLoader.LoadFolder(cls.UE_FOLDER, "UE")
-        cls.Validation.extend(v)
+        if os.path.isdir(cls.UE_FOLDER):
+            for sub in os.listdir(cls.UE_FOLDER):
+                sub_path = os.path.join(cls.UE_FOLDER, sub)
+                if os.path.isdir(sub_path):
+                    v = UeLoader.LoadFolder(sub_path, "UE")
+                    cls.Validation.extend(v)
 
         ScenarioLoader.Clear()
         v = ScenarioLoader.LoadFolder(cls.SCENARIO_FOLDER, "Scenario")

@@ -20,6 +20,7 @@ class ExecutionQueue:
         executionId = Status.NextId()
 
         descriptor = params.get("Descriptor")
+        user_id = descriptor._data.get("UserId") if descriptor and hasattr(descriptor, "_data") else None
         testcase_names = []
         ue_names = []
 
@@ -30,8 +31,11 @@ class ExecutionQueue:
         folder = os.path.abspath("Persistence/Executions_yml")
         os.makedirs(folder, exist_ok=True)
 
+        tc_folder = Facility.testcase_folder(user_id)
+        ue_folder = Facility.ue_folder(user_id)
+
         for name in testcase_names:
-            raw = load_raw(Facility.TESTCASE_FOLDER, Facility.testCases, {name})
+            raw = load_raw(tc_folder, Facility.testCases, {name})
             if name in raw:
                 raw_content = raw[name][0]
                 dest_path = os.path.join(folder, f"{executionId}_testcase_{name}.yml")
@@ -40,7 +44,7 @@ class ExecutionQueue:
                 Log.I(f"Copied TestCase '{name}' YAML to {dest_path}")
 
         for name in ue_names:
-            raw = load_raw(Facility.UE_FOLDER, Facility.ues, {name})
+            raw = load_raw(ue_folder, Facility.ues, {name})
             if name in raw:
                 raw_content = raw[name][0]
                 dest_path = os.path.join(folder, f"{executionId}_ue_{name}.yml")

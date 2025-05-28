@@ -1,12 +1,10 @@
 from Scheduler.facility import bp
 from Facility import Facility
 from Interfaces import Management
-from flask import jsonify
-from typing import Dict
-import os
-from flask import request
-import yaml
+from flask import jsonify, request
 from typing import Dict, List
+import os
+import yaml
 
 @bp.route('/resource_status')
 def resourceStatus():
@@ -20,23 +18,78 @@ def resourceStatus():
 
 @bp.route('/ues')
 def facilityUes():
-    return jsonify({
-        'UEs': sorted(list(Facility.ues.keys()))
-    })
+    user_id = request.args.get('user_id')
+    if user_id:
+        folder = Facility.ue_folder(user_id)
+        names: List[str] = []
+        for fn in os.listdir(folder):
+            if not fn.lower().endswith('.yml'):
+                continue
+            path = os.path.join(folder, fn)
+            try:
+                data = yaml.safe_load(open(path, encoding='utf-8'))
+            except Exception:
+                continue
+
+            if isinstance(data, dict):
+                if 'Name' in data:
+                    name = data['Name']
+                elif len(data) == 1:
+                    name = next(iter(data.keys()))
+                else:
+                    continue
+            else:
+                continue
+
+            if name in Facility.ues:
+                names.append(name)
+
+        ues = sorted(names)
+    else:
+        ues = sorted(list(Facility.ues.keys()))
+
+    return jsonify({'UEs': ues})
 
 
 @bp.route('/testcases')
 def facilityTestCases():
-    res = []
-    testcases = sorted(list(Facility.testCases.keys()))
-    for testcase in testcases:
-        if testcase == 'MONROE_Base': continue
+    user_id = request.args.get('user_id')
+    if user_id:
+        folder = Facility.testcase_folder(user_id)
+        items: List[(str, Dict[str, object])] = []
+        for fn in os.listdir(folder):
+            if not fn.lower().endswith('.yml'):
+                continue
+            path = os.path.join(folder, fn)
+            try:
+                data = yaml.safe_load(open(path, encoding='utf-8'))
+            except Exception:
+                continue
 
-        # Work over a copy, otherwise we end up overwriting the Facility data
-        extra = Facility.GetTestCaseExtra(testcase).copy()
+            if isinstance(data, dict):
+                if 'Name' in data:
+                    name = data['Name']
+                elif len(data) == 1:
+                    name = next(iter(data.keys()))
+                else:
+                    continue
+            else:
+                continue
+
+            if name != 'MONROE_Base' and name in Facility.testCases:
+                items.append((name, Facility.GetTestCaseExtra(name).copy()))
+    else:
+        items = [
+            (tc, Facility.GetTestCaseExtra(tc).copy())
+            for tc in Facility.testCases
+            if tc != 'MONROE_Base'
+        ]
+
+    res = []
+    for name, extra in sorted(items, key=lambda x: x[0]):
         parametersDict: Dict[str, Dict[str, str]] = extra.pop('Parameters', {})
         parameters = []
-        extra['Name'] = testcase
+        extra['Name'] = name
         for key in sorted(parametersDict.keys()):
             info = parametersDict[key]
             info['Name'] = key
@@ -59,18 +112,24 @@ def scenarios():
 
 @bp.route('/testcases/delete', methods=['POST'])
 def deleteTestCase():
-    test_case_name = request.json.get('test_case_name')
-    file_type = request.json.get('file_type', 'testcase')
+    data = request.json
+    test_case_name = data.get('test_case_name')
+    file_type = data.get('file_type', 'testcase')
+    user_id = data.get('user_id')
 
     if not test_case_name:
         return jsonify({"success": False, "message": "No test case name provided"}), 400
+    if not user_id:
+        return jsonify({"success": False, "message": "user_id is required"}), 400
 
     if file_type == 'testcase':
-        folder = Facility.TESTCASE_FOLDER
-        files_dict = Facility.testCases
+        folder, files_dict = (
+            Facility.testcase_folder(user_id), Facility.testCases
+        )
     elif file_type == 'ues':
-        folder = Facility.UE_FOLDER
-        files_dict = Facility.ues
+        folder, files_dict = (
+            Facility.ue_folder(user_id), Facility.ues
+        )
     else:
         return jsonify({"success": False, "message": f"Invalid file type: {file_type}"}), 400
 
@@ -81,21 +140,22 @@ def deleteTestCase():
         deleted_files = []
 
         for filename in os.listdir(folder):
-            if filename.endswith('.yml'):
-                file_path = os.path.join(folder, filename)
-                
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        data = yaml.safe_load(file)
-                except yaml.YAMLError:
-                    continue  
+            if not filename.lower().endswith('.yml'):
+                continue
+            file_path = os.path.join(folder, filename)
 
-                if isinstance(data, dict) and (
-                    data.get("Name") == test_case_name
-                    or test_case_name in data
-                ):
-                    os.remove(file_path)
-                    deleted_files.append(filename)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    data = yaml.safe_load(file)
+            except yaml.YAMLError:
+                continue
+
+            if isinstance(data, dict) and (
+                data.get("Name") == test_case_name
+                or test_case_name in data
+            ):
+                os.remove(file_path)
+                deleted_files.append(filename)
 
         if not deleted_files:
             return jsonify({"success": False, "message": f"{file_type} {test_case_name} file was not found"}), 404
@@ -111,19 +171,26 @@ def deleteTestCase():
     except Exception as e:
         return jsonify({"success": False, "message": f"Error deleting {file_type}: {str(e)}"}), 500
 
+
 @bp.route('/upload_test_case', methods=['POST'])
 def upload_test_case():
     uploaded = request.files.get('test_case')
     file_type = request.form.get('file_type', 'testcase')
+    user_id = request.form.get('user_id')
 
     # 1) Basic validations
+    if not user_id:
+        return jsonify({"success": False, "message": "user_id is required"}), 400
     if not uploaded:
         return jsonify({"success": False, "message": "No file received"}), 400
     if not uploaded.filename.lower().endswith('.yml'):
         return jsonify({"success": False, "message": "Only .yml files are allowed"}), 400
 
     # 2) Determine destination folder
-    folder = Facility.UE_FOLDER if file_type == 'ues' else Facility.TESTCASE_FOLDER
+    if file_type == 'ues':
+        folder = Facility.ue_folder(user_id)
+    else:
+        folder = Facility.testcase_folder(user_id)
 
     # 3) Read and parse YAML
     try:
@@ -194,8 +261,7 @@ def upload_test_case():
         Facility.Reload()
         return jsonify({
             "success": True,
-            "message": f"{'UEs' if file_type == 'ues' else 'Test case'} "
-                       f"'{internal_name}' uploaded successfully"
+            "message": f"{'UEs' if file_type == 'ues' else 'Test case'} '{internal_name}' uploaded successfully"
         }), 200
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
@@ -209,51 +275,62 @@ def convert_to_dict(obj):
         return {key: convert_to_dict(value) for key, value in vars(obj).items()}
     else:
         return obj
-    
+
+
 def load_raw(folder: str, index: Dict[str, object], names: set) -> Dict[str, List[str]]:
-        out = {}
-        for name in names:
-            if name not in index:
+    out = {}
+    for name in names:
+        if name not in index:
+            continue
+        raw_versions = []
+        for fn in os.listdir(folder):
+            if not fn.lower().endswith(".yml"):
                 continue
-            raw_versions = []
-            for fn in os.listdir(folder):
-                if not fn.lower().endswith(".yml"):
-                    continue
-                path = os.path.join(folder, fn)
+            path = os.path.join(folder, fn)
+            try:
+                data = yaml.safe_load(open(path, encoding="utf-8"))
+            except Exception:
+                continue
+
+            if isinstance(data, dict) and (data.get("Name") == name or name in data):
                 try:
-                    data = yaml.safe_load(open(path, encoding="utf-8"))
+                    raw_versions.append(open(path, encoding="utf-8").read())
                 except Exception:
                     continue
-
-                if isinstance(data, dict) and (data.get("Name") == name or name in data):
-                    try:
-                        raw_versions.append(open(path, encoding="utf-8").read())
-                    except Exception:
-                        continue
-            if raw_versions:
-                out[name] = raw_versions
-        return out
+        if raw_versions:
+            out[name] = raw_versions
+    return out
 
 @bp.route('/testcases/info', methods=['POST'])
 def facilityTestCasesInfo():
     data = request.get_json()
     requested_testcases = set(data.get("TestCases", []))
     requested_ues = set(data.get("UEs", []))
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"success": False, "message": "user_id is required"}), 400
+    tc_folder = Facility.testcase_folder(user_id)
+    ue_folder = Facility.ue_folder(user_id)
 
-    testcases_raw = load_raw(Facility.TESTCASE_FOLDER, Facility.testCases, requested_testcases)
-    ues_raw       = load_raw(Facility.UE_FOLDER,      Facility.ues,      requested_ues)
+    testcases_raw = load_raw(tc_folder, Facility.testCases, requested_testcases)
+    ues_raw       = load_raw(ue_folder,      Facility.ues,       requested_ues)
 
     return jsonify({
         "TestCases": testcases_raw,
         "UEs":       ues_raw
     })
 
+
 @bp.route('/edit_test_case', methods=['POST'])
 def edit_test_case():
     uploaded = request.files.get('test_case')
     file_type = request.form.get('file_type', 'testcase')
+    user_id = request.form.get('user_id')
 
     # 1) Basic validation
+    if not user_id:
+        return jsonify({"success": False, "message": "user_id is required"}), 400
+    
     if not uploaded or not uploaded.filename.lower().endswith('.yml'):
         return jsonify({"success": False, "message": "No file received or invalid extension"}), 400
 
@@ -304,8 +381,12 @@ def edit_test_case():
             "message": f"{file_type.capitalize()} '{internal_name}' does not exist"
         }), 404
 
-    # 7) Prevent version changes (V1 ↔ V2)
-    folder = Facility.UE_FOLDER if file_type == 'ues' else Facility.TESTCASE_FOLDER
+    # 7) Determine folder
+    if file_type == 'ues':
+        folder = Facility.ue_folder(user_id)
+    else:
+        folder = Facility.testcase_folder(user_id)
+    # 8) Prevent version changes (V1 ↔ V2)
     existing_doc = None
     for fn in os.listdir(folder):
         if not fn.lower().endswith('.yml'):
@@ -337,7 +418,7 @@ def edit_test_case():
             "message": f"Editing not allowed: '{internal_name}' is a V1 TestCase and cannot be upgraded to V2."
         }), 400
 
-    # 8) Delete existing file(s)
+    # 9) Delete existing file(s)
     for fn in os.listdir(folder):
         if not fn.lower().endswith('.yml'):
             continue
@@ -352,7 +433,7 @@ def edit_test_case():
         ):
             os.remove(path)
 
-    # 9) Save new YAML
+    # 10) Save new YAML
     save_path = os.path.join(folder, f"{internal_name}.yml")
     try:
         uploaded.save(save_path)
