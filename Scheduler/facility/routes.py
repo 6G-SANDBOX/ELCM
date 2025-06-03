@@ -19,7 +19,7 @@ def resourceStatus():
 @bp.route('/ues')
 def facilityUes():
     user_id = request.args.get('user_id')
-    if user_id:
+    if user_id and user_id.isdigit():
         folder = Facility.ue_folder(user_id)
         names: List[str] = []
         for fn in os.listdir(folder):
@@ -54,7 +54,7 @@ def facilityUes():
 @bp.route('/testcases')
 def facilityTestCases():
     user_id = request.args.get('user_id')
-    if user_id:
+    if user_id and user_id.isdigit():
         folder = Facility.testcase_folder(user_id)
         items: List[(str, Dict[str, object])] = []
         for fn in os.listdir(folder):
@@ -123,13 +123,19 @@ def deleteTestCase():
         return jsonify({"success": False, "message": "user_id is required"}), 400
 
     if file_type == 'testcase':
-        folder, files_dict = (
-            Facility.testcase_folder(user_id), Facility.testCases
-        )
+        try:
+            folder, files_dict = (
+                Facility.testcase_folder(user_id), Facility.testCases
+            )
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
     elif file_type == 'ues':
-        folder, files_dict = (
-            Facility.ue_folder(user_id), Facility.ues
-        )
+        try:
+            folder, files_dict = (
+                Facility.ue_folder(user_id), Facility.ues
+            )
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
     else:
         return jsonify({"success": False, "message": f"Invalid file type: {file_type}"}), 400
 
@@ -188,9 +194,15 @@ def upload_test_case():
 
     # 2) Determine destination folder
     if file_type == 'ues':
-        folder = Facility.ue_folder(user_id)
+        try:
+            folder = Facility.ue_folder(user_id)
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
     else:
-        folder = Facility.testcase_folder(user_id)
+        try:
+            folder = Facility.testcase_folder(user_id)
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
 
     # 3) Read and parse YAML
     try:
@@ -309,8 +321,11 @@ def facilityTestCasesInfo():
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({"success": False, "message": "user_id is required"}), 400
-    tc_folder = Facility.testcase_folder(user_id)
-    ue_folder = Facility.ue_folder(user_id)
+    try:
+        tc_folder = Facility.testcase_folder(user_id)
+        ue_folder = Facility.ue_folder(user_id)
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
 
     testcases_raw = load_raw(tc_folder, Facility.testCases, requested_testcases)
     ues_raw       = load_raw(ue_folder,      Facility.ues,       requested_ues)
@@ -383,9 +398,16 @@ def edit_test_case():
 
     # 7) Determine folder
     if file_type == 'ues':
-        folder = Facility.ue_folder(user_id)
+        try:
+            folder = Facility.ue_folder(user_id)
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
     else:
-        folder = Facility.testcase_folder(user_id)
+        try:
+            folder = Facility.testcase_folder(user_id)
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
+
     # 8) Prevent version changes (V1 ↔ V2)
     existing_doc = None
     for fn in os.listdir(folder):

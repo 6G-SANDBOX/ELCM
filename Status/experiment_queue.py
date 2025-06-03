@@ -31,8 +31,12 @@ class ExecutionQueue:
         folder = os.path.abspath("Persistence/Executions_yml")
         os.makedirs(folder, exist_ok=True)
 
-        tc_folder = Facility.testcase_folder(user_id)
-        ue_folder = Facility.ue_folder(user_id)
+        try:
+            tc_folder = Facility.testcase_folder(user_id)
+            ue_folder = Facility.ue_folder(user_id)
+        except ValueError as e:
+            Log.W(f"Invalid user_id for execution {executionId}: {e}")
+            raise
 
         for name in testcase_names:
             raw = load_raw(tc_folder, Facility.testCases, {name})

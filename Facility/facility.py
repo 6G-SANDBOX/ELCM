@@ -32,14 +32,30 @@ class Facility:
 
     @classmethod
     def testcase_folder(cls, user_id: str) -> str:
-        sub = str(user_id)
+        
+        try:
+            user_id_int = int(user_id)
+            if user_id_int < 0:
+                raise ValueError
+            sub = str(user_id_int)
+        except (ValueError, TypeError):
+            raise ValueError("user_id must be a non-negative integer")
+
         path = os.path.join(cls.TESTCASE_FOLDER, sub)
         os.makedirs(path, exist_ok=True)
         return path
 
     @classmethod
     def ue_folder(cls, user_id: str) -> str:
-        sub = str(user_id)
+        
+        try:
+            user_id_int = int(user_id)
+            if user_id_int < 0:
+                raise ValueError
+            sub = str(user_id_int)
+        except (ValueError, TypeError):
+            raise ValueError("user_id must be a non-negative integer")
+
         path = os.path.join(cls.UE_FOLDER, sub)
         os.makedirs(path, exist_ok=True)
         return path

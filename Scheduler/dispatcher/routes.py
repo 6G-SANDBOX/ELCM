@@ -1,9 +1,8 @@
-from flask import jsonify, request, abort
+from flask import jsonify, request
 from Status import ExecutionQueue
 from Data import ExperimentDescriptor
 from Scheduler.dispatcher import bp
 from Helper import Log
-
 
 @bp.route('/run', methods=['POST'])
 def start():
@@ -24,7 +23,8 @@ def start():
         params = {'Descriptor': descriptor}
         executionId = ExecutionQueue.Create(params).Id
         return jsonify({'ExecutionId': executionId})
+
     except Exception as e:
         message = f"Exception while processing execution request: {e}"
         Log.W(message)
-        return abort(400, message)
+        return jsonify({"success": False, "message": message}), 400
