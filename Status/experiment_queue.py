@@ -21,6 +21,7 @@ class ExecutionQueue:
 
         descriptor = params.get("Descriptor")
         user_id = descriptor._data.get("UserId") if descriptor and hasattr(descriptor, "_data") else None
+        params['UserId'] = user_id
         testcase_names = []
         ue_names = []
 
