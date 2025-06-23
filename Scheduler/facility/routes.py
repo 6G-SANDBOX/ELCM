@@ -108,7 +108,38 @@ def baseSliceDescriptors():
 
 @bp.route('/scenarios')
 def scenarios():
-    return jsonify({"Scenarios": list(Facility.scenarios.keys())})
+    user_id = request.args.get('user_id')
+    if user_id and user_id.isdigit():
+        folder = Facility.scenario_folder(user_id)
+        names: List[str] = []
+        for fn in os.listdir(folder):
+            if not fn.lower().endswith('.yml'):
+                continue
+            path = os.path.join(folder, fn)
+            try:
+                data = yaml.safe_load(open(path, encoding='utf-8'))
+            except Exception:
+                continue
+
+            if isinstance(data, dict):
+                if 'Name' in data:
+                    name = data['Name']
+                elif len(data) == 1:
+                    name = next(iter(data.keys()))
+                else:
+                    continue
+            else:
+                continue
+
+            if name in Facility.scenarios:
+                names.append(name)
+
+        scenarios = sorted(names)
+    else:
+        scenarios = sorted(list(Facility.scenarios.keys()))
+
+    return jsonify({'Scenarios': scenarios})
+
 
 @bp.route('/testcases/delete', methods=['POST'])
 def deleteTestCase():
@@ -133,6 +164,13 @@ def deleteTestCase():
         try:
             folder, files_dict = (
                 Facility.ue_folder(user_id), Facility.ues
+            )
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
+    elif file_type == 'scenarios':
+        try:
+            folder, files_dict = (
+                Facility.scenario_folder(user_id), Facility.scenarios
             )
         except ValueError as e:
             return jsonify({"success": False, "message": str(e)}), 400
@@ -198,6 +236,11 @@ def upload_test_case():
             folder = Facility.ue_folder(user_id)
         except ValueError as e:
             return jsonify({"success": False, "message": str(e)}), 400
+    elif file_type == 'scenarios':
+        try:
+            folder = Facility.scenario_folder(user_id)
+        except ValueError as e:
+            return jsonify({"success": False, "message": str(e)}), 400
     else:
         try:
             folder = Facility.testcase_folder(user_id)
@@ -258,7 +301,7 @@ def upload_test_case():
         Facility.Reload()
         return jsonify({
             "success": True,
-            "message": f"{'UEs' if file_type == 'ues' else 'Test case'} '{internal_name}' uploaded successfully"
+            "message": f"{'UEs' if file_type == 'ues' else ('Scenarios' if file_type == 'scenarios' else 'Test case')} '{internal_name}' uploaded successfully"
         }), 200
     except Exception as e:
         return jsonify({"success": False, "message": f"Error saving file: {e}"}), 500
@@ -303,21 +346,25 @@ def facilityTestCasesInfo():
     data = request.get_json()
     requested_testcases = set(data.get("TestCases", []))
     requested_ues = set(data.get("UEs", []))
+    requested_scenarios = set(data.get("Scenarios", []))
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({"success": False, "message": "user_id is required"}), 400
     try:
         tc_folder = Facility.testcase_folder(user_id)
         ue_folder = Facility.ue_folder(user_id)
+        sc_folder = Facility.scenario_folder(user_id)
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
 
     testcases_raw = load_raw(tc_folder, Facility.testCases, requested_testcases)
-    ues_raw       = load_raw(ue_folder,      Facility.ues,       requested_ues)
+    ues_raw       = load_raw(ue_folder,    Facility.ues,       requested_ues)
+    scenarios_raw = load_raw(sc_folder,    Facility.scenarios, requested_scenarios)
 
     return jsonify({
         "TestCases": testcases_raw,
-        "UEs":       ues_raw
+        "UEs":       ues_raw,
+        "Scenarios": scenarios_raw
     })
 
 
@@ -369,7 +416,12 @@ def edit_test_case():
 
     # 5) Determine folder
     try:
-        folder = Facility.ue_folder(user_id) if file_type == 'ues' else Facility.testcase_folder(user_id)
+        if file_type == 'ues':
+            folder = Facility.ue_folder(user_id)
+        elif file_type == 'scenarios':
+            folder = Facility.scenario_folder(user_id)
+        else:
+            folder = Facility.testcase_folder(user_id)
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
 
@@ -425,6 +477,7 @@ def get_execution_info():
 
     testcases = {}
     ues = {}
+    scenarios = {}
 
     for filename in os.listdir(folder):
         if not filename.endswith(".yml"):
@@ -448,14 +501,24 @@ def get_execution_info():
             except Exception:
                 continue
 
-    if not testcases and not ues:
+        elif filename.startswith(f"{execution_id}_scenario_"):
+            name = filename.replace(f"{execution_id}_scenario_", "").replace(".yml", "")
+            path = os.path.join(folder, filename)
+            try:
+                with open(path, encoding='utf-8') as f:
+                    scenarios[name] = [f.read()]
+            except Exception:
+                continue
+
+    if not testcases and not ues and not scenarios:
         return jsonify({
             "success": False,
-            "message": f"No testcases or UEs found for execution ID '{execution_id}'"
+            "message": f"No testcases, UEs or Scenarios found for execution ID '{execution_id}'"
         }), 404
 
     return jsonify({
         "ExecutionId": execution_id,
         "TestCases": testcases,
-        "UEs": ues
+        "UEs": ues,
+        "Scenarios": scenarios
     }), 200

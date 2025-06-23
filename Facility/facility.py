@@ -59,6 +59,21 @@ class Facility:
         path = os.path.join(cls.UE_FOLDER, sub)
         os.makedirs(path, exist_ok=True)
         return path
+    
+    @classmethod
+    def scenario_folder(cls, user_id: str) -> str:
+        
+        try:
+            user_id_int = int(user_id)
+            if user_id_int < 0:
+                raise ValueError
+            sub = str(user_id_int)
+        except (ValueError, TypeError):
+            raise ValueError("user_id must be a non-negative integer")
+
+        path = os.path.join(cls.SCENARIO_FOLDER, sub)
+        os.makedirs(path, exist_ok=True)
+        return path
 
     @classmethod
     def Reload(cls):
@@ -97,8 +112,12 @@ class Facility:
                     cls.Validation.extend(v)
 
         ScenarioLoader.Clear()
-        v = ScenarioLoader.LoadFolder(cls.SCENARIO_FOLDER, "Scenario")
-        cls.Validation.extend(v)
+        if os.path.isdir(cls.SCENARIO_FOLDER):
+            for sub in os.listdir(cls.SCENARIO_FOLDER):
+                sub_path = os.path.join(cls.SCENARIO_FOLDER, sub)
+                if os.path.isdir(sub_path):
+                    v = ScenarioLoader.LoadFolder(sub_path, "Scenario")
+                    cls.Validation.extend(v)
 
         cls.resources = resources
         cls.testCases = TestCaseLoader.GetCurrentTestCases()
