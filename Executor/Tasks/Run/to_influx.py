@@ -53,7 +53,9 @@ class ToInfluxBase(Task):
         influx_point.Fields = data
 
         influx_payload = influx.InfluxPayload(measurement)
+        user_id = self.parent.params.get('UserId')
         influx_payload.Tags = {'ExecutionId': str(executionId), **influx.InfluxDb.BaseTags()}
+        influx_payload.Tags['UserId'] = str(user_id)
         influx_payload.Points.append(influx_point)
 
         influx.InfluxDb.Send(influx_payload)
@@ -63,7 +65,8 @@ class ToInfluxBase(Task):
         url = f"http://{config.InfluxDb.Host}:{config.InfluxDb.Port}/api/v2/write"
         params_influx = {"org": config.InfluxDb.Org, "bucket": config.InfluxDb.Database, "precision": "s"}
         headers_influx = {"Authorization": f"Token {config.InfluxDb.Token}", "Content-Type": "text/plain; charset=utf-8"}
-        
+        user_id = self.parent.params.get('UserId')
+
         lines = csv_data.split("\n")
         sniffer = csv.Sniffer()
         sample = "\n".join(lines[:2])
@@ -81,6 +84,7 @@ class ToInfluxBase(Task):
             data_dict = dict(zip(column_names, row))
             timestamp_influx = int(time.time())
             tags = f"ExecutionId={executionId}"
+            tags += f",UserId={user_id}"
             fields = []
             for key, value in data_dict.items():
                 key_cleaned = self.sanitize_string(key)

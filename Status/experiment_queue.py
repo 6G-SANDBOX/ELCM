@@ -20,18 +20,30 @@ class ExecutionQueue:
         executionId = Status.NextId()
 
         descriptor = params.get("Descriptor")
+        user_id = descriptor._data.get("UserId") if descriptor and hasattr(descriptor, "_data") else None
+        params['UserId'] = user_id
         testcase_names = []
         ue_names = []
+        scenario_names = []
 
         if descriptor and hasattr(descriptor, "_data"):
             testcase_names = descriptor._data.get("TestCases", [])
             ue_names = descriptor._data.get("UEs", [])
+            scenario_names = descriptor._data.get("Scenario", [])
 
         folder = os.path.abspath("Persistence/Executions_yml")
         os.makedirs(folder, exist_ok=True)
 
+        try:
+            tc_folder = Facility.testcase_folder(user_id)
+            ue_folder = Facility.ue_folder(user_id)
+            scenario_folder = Facility.scenario_folder(user_id)
+        except ValueError as e:
+            Log.W(f"Invalid user_id for execution {executionId}: {e}")
+            raise
+
         for name in testcase_names:
-            raw = load_raw(Facility.TESTCASE_FOLDER, Facility.testCases, {name})
+            raw = load_raw(tc_folder, Facility.testCases, {name})
             if name in raw:
                 raw_content = raw[name][0]
                 dest_path = os.path.join(folder, f"{executionId}_testcase_{name}.yml")
@@ -40,13 +52,22 @@ class ExecutionQueue:
                 Log.I(f"Copied TestCase '{name}' YAML to {dest_path}")
 
         for name in ue_names:
-            raw = load_raw(Facility.UE_FOLDER, Facility.ues, {name})
+            raw = load_raw(ue_folder, Facility.ues, {name})
             if name in raw:
                 raw_content = raw[name][0]
                 dest_path = os.path.join(folder, f"{executionId}_ue_{name}.yml")
                 with open(dest_path, "w", encoding="utf-8") as f:
                     f.write(raw_content)
                 Log.I(f"Copied UE '{name}' YAML to {dest_path}")
+
+        for name in scenario_names:
+            raw = load_raw(scenario_folder, Facility.scenarios, {name})
+            if name in raw:
+                raw_content = raw[name][0]
+                dest_path = os.path.join(folder, f"{executionId}_scenario_{name}.yml")
+                with open(dest_path, "w", encoding="utf-8") as f:
+                    f.write(raw_content)
+                Log.I(f"Copied Scenario '{name}' YAML to {dest_path}")
 
         execution = ExperimentRun(executionId, params)
         cls.queue.appendleft(execution)

@@ -1,3 +1,12 @@
+**24/06/2025** [Version 3.9.0]
+
+- Added multi-user support for TestCases, UEs, and Scenarios.
+- Updated multiple endpoints to allow user-specific operations and access control.
+- Included UserId as a tag when exporting data to InfluxDB.
+- Refactored folder structure and resource handling to support per-user separation and execution-based persistence.
+- Improved file handling and validation for uploads, edits, and deletions.
+- Updated library requirements
+
 **20/05/2025** [Version 3.8.1]
 
 - Added support for custom queries (InfluxQL and Flux) for exporting data from InfluxDB.
