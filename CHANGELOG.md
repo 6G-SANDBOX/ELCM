@@ -1,6 +1,8 @@
 **14/07/2025** [Version 3.9.1]
 
 - Replaced `flask run` with the `waitress` server to initialize the ELCM.
+- Improved overall service stability and performance in production setups.
+
 
 **24/06/2025** [Version 3.9.0]
 
