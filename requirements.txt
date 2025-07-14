@@ -13,3 +13,4 @@ requests~=2.32.3
 influxdb-client~=1.49.0
 paramiko~=3.5.0
 kafka-python~=2.2.4
+waitress~=3.0.2

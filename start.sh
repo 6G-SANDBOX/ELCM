@@ -8,5 +8,5 @@ fi
 
 echo Starting ELCM on port $port
 source ./venv/bin/activate
-flask run --host 0.0.0.0 --port $port
+waitress-serve --threads=1 --listen=*:$port Scheduler:app
 deactivate
