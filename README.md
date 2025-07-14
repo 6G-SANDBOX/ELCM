@@ -6,7 +6,7 @@
 
 ### Optional integrations:
 
- - [Portal](https://gitlab.com/morse-uma/elcm-portal) Version 3.1.0 or later
+ - [Portal](https://gitlab.com/morse-uma/elcm-portal) Version 3.2.2 or later
  - [Katana Slice Manager](https://github.com/5genesis/katana-slice_manager) Version 2.2.6 (14/07/2020) or later
 
 #### Third party components
