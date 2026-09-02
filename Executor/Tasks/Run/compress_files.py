@@ -15,9 +15,17 @@ class CompressFiles(Task):
     def Run(self):
         from Helper import Compress, IO
 
-        files = [abspath(f) for f in self.params["Files"]]
-        folders = [abspath(f) for f in self.params["Folders"]]
-        output = self.params["Output"] .get("Output", "")
+        files = [
+            abspath(f["Source"] if isinstance(f, dict) else f)
+            for f in self.params["Files"]
+        ]
+
+        folders = [
+            abspath(folder)
+            for folder in self.params["Folders"]
+        ]
+
+        output = self.params["Output"]
 
         self.Log(Level.INFO, f"Compressing files to output: {output}")
 
@@ -30,6 +38,10 @@ class CompressFiles(Task):
             Compress.Zip(files, output)
             self.Log(Level.INFO, "File created")
             self.parent.GeneratedFiles.append(output)
+
         except Exception as e:
             self.SetVerdictOnError()
-            self.Log(Level.ERROR, f"Exception while creating zip file: {e}")
+            self.Log(
+                Level.ERROR,
+                f"Exception while creating zip file: {e}"
+            )
